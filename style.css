@@ -1,3 +1,4 @@
+
 * {
   box-sizing: border-box;
 }
@@ -159,6 +160,68 @@ button:disabled {
   letter-spacing: 2px;
 }
 
+.mode-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.mode-button {
+  min-height: 58px;
+  margin: 0;
+  padding: 12px 8px;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  border: 1px solid var(--border);
+  background: #030904;
+}
+
+.mode-button.active {
+  color: #020603;
+  background: var(--green);
+  border-color: var(--green);
+  box-shadow: 0 0 16px #00ff6650;
+}
+
+.mode-button:not(.active):hover {
+  color: var(--green);
+  background: #0b190e;
+}
+
+#ipTarget {
+  width: 100%;
+  padding: 13px;
+  margin-top: 8px;
+  background: #020603;
+  color: var(--green);
+  border: 1px solid var(--dark-green);
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+#ipTarget:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 12px #00ff6640;
+}
+
+#ipResult {
+  min-height: 45px;
+  overflow-wrap: anywhere;
+}
+
+#ipResult.success {
+  color: var(--green);
+  border-color: var(--dark-green);
+}
+
+#ipResult.error {
+  color: #ff5555;
+  border-color: #8b2222;
+}
+
 .link-row {
   display: flex;
   gap: 8px;
@@ -301,5 +364,13 @@ footer {
   .link-row input {
     width: 100%;
     flex-basis: 100%;
+  }
+
+  .mode-selector {
+    grid-template-columns: 1fr;
+  }
+
+  .mode-button {
+    min-height: 48px;
   }
 }
