@@ -11,11 +11,19 @@ const isIpVisitor = /^\/ip\/[a-f0-9]{32}$/.test(
   window.location.pathname
 );
 
+const isLocationVisitor = /^\/location\/[a-f0-9]{32}$/.test(
+  window.location.pathname
+);
+
 const roomId = isGuest
   ? window.location.pathname.split("/").pop()
   : null;
 
 const ipLinkId = isIpVisitor
+  ? window.location.pathname.split("/").pop()
+  : null;
+
+const locationLinkId = isLocationVisitor
   ? window.location.pathname.split("/").pop()
   : null;
 
@@ -27,6 +35,12 @@ let roomCode = "";
 let candidateQueue = [];
 let activeMode = "ip";
 let ipLinkRefreshTimer = null;
+
+// LOCATION TRACKER: independent credentials and state
+let locationOwnerToken = "";
+let locationRoomCode = "";
+let locationRefreshTimer = null;
+let displayedLocationIds = new Set();
 
 const rtcConfig = {
   iceServers: [
@@ -58,32 +72,41 @@ function showMessage(id, message) {
 
 // MODE SWITCHING
 function switchMode(mode) {
-  if (isGuest || isIpVisitor) return;
+  if (isGuest || isIpVisitor || isLocationVisitor) return;
 
   activeMode = mode;
 
-  const ipPanel = $("ipPanel");
-  const hostPanel = $("hostPanel");
-  const ipButton = $("ipModeButton");
-  const phoneButton = $("phoneModeButton");
+  const panels = {
+    ip: $("ipPanel"),
+    phone: $("hostPanel"),
+    location: $("locationPanel")
+  };
 
-  if (mode === "ip") {
-    ipPanel.classList.remove("hidden");
-    hostPanel.classList.add("hidden");
+  const buttons = {
+    ip: $("ipModeButton"),
+    phone: $("phoneModeButton"),
+    location: $("locationModeButton")
+  };
 
-    ipButton.classList.add("active");
-    phoneButton.classList.remove("active");
+  Object.entries(panels).forEach(([name, panel]) => {
+    if (panel) {
+      panel.classList.toggle("hidden", name !== mode);
+    }
+  });
 
-    log("IP ADDRESS LOOKUP mode activated.", "green");
-  } else {
-    ipPanel.classList.add("hidden");
-    hostPanel.classList.remove("hidden");
+  Object.entries(buttons).forEach(([name, button]) => {
+    if (button) {
+      button.classList.toggle("active", name === mode);
+    }
+  });
 
-    ipButton.classList.remove("active");
-    phoneButton.classList.add("active");
+  const messages = {
+    ip: "IP ADDRESS LOOKUP mode activated.",
+    phone: "PHONE CONNECTION mode activated.",
+    location: "LOCATION TRACKER mode activated."
+  };
 
-    log("PHONE CONNECTION mode activated.", "green");
-  }
+  log(messages[mode] || "Unknown mode.");
 }
 
 $("ipModeButton")?.addEventListener("click", () => {
@@ -92,6 +115,10 @@ $("ipModeButton")?.addEventListener("click", () => {
 
 $("phoneModeButton")?.addEventListener("click", () => {
   switchMode("phone");
+});
+
+$("locationModeButton")?.addEventListener("click", () => {
+  switchMode("location");
 });
 
 // IP LOOKUP
@@ -235,7 +262,7 @@ $("copyIpLink")?.addEventListener("click", async () => {
     log("IP link copied.", "green");
 
     setTimeout(() => {
-      button.textContent = "COPY";
+      button.textContent = "КОПИРОВАТЬ";
     }, 1500);
 
   } catch {
@@ -245,7 +272,7 @@ $("copyIpLink")?.addEventListener("click", async () => {
     button.textContent = "COPIED!";
 
     setTimeout(() => {
-      button.textContent = "COPY";
+      button.textContent = "КОПИРОВАТЬ";
     }, 1500);
   }
 });
@@ -309,7 +336,7 @@ async function loadVisitorIps() {
   }
 }
 
-// VISITOR: GIVE CONSENT
+// VISITOR: GIVE IP CONSENT
 async function allowIpShare() {
   const button = $("allowIpShare");
   const decline = $("declineIpShare");
@@ -361,7 +388,7 @@ async function allowIpShare() {
 
 $("allowIpShare")?.addEventListener("click", allowIpShare);
 
-// VISITOR: DECLINE
+// VISITOR: DECLINE IP
 $("declineIpShare")?.addEventListener("click", () => {
   $("visitorIpResult").className = "device-info";
   $("visitorIpResult").textContent =
@@ -372,6 +399,411 @@ $("declineIpShare")?.addEventListener("click", () => {
 
   log("Visitor declined IP sharing.");
 });
+
+// ======================================================
+// LOCATION TRACKER v2.5
+// ======================================================
+
+// OWNER: CREATE LOCATION LINK
+async function createLocationLink() {
+  const button = $("createLocationLink");
+  const area = $("locationLinkArea");
+  const message = $("locationLinkMessage");
+
+  if (!button || !area || !message) return;
+
+  button.disabled = true;
+  button.textContent = "CREATING LOCATION LINK...";
+
+  try {
+    const response = await fetch("/api/location-link/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({})
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Could not create location link."
+      );
+    }
+
+    locationOwnerToken = data.ownerToken;
+    locationRoomCode = data.linkId;
+
+    $("locationConnectionLink").value = data.link;
+
+    area.classList.remove("hidden");
+
+    message.textContent =
+      "ССЫЛКА СОЗДАНА. СРОК ДЕЙСТВИЯ: " +
+      (data.expiresIn || "указан сервером");
+
+    $("visitorLocationList").textContent =
+      "ОЖИДАНИЕ РАЗРЕШЕНИЯ ПОСЕТИТЕЛЯ...";
+
+    $("locationMapInfo").textContent =
+      "ОЖИДАНИЕ GPS-КООРДИНАТ...";
+
+    $("locationMapLink").classList.add("hidden");
+
+    displayedLocationIds.clear();
+
+    log("LOCATION LINK CREATED.", "green");
+    log("Waiting for visitor's explicit permission.", "green");
+
+    button.textContent = "CREATE ANOTHER LINK";
+    button.disabled = false;
+
+    await loadVisitorLocations();
+
+    if (locationRefreshTimer) {
+      clearInterval(locationRefreshTimer);
+    }
+
+    locationRefreshTimer = setInterval(
+      loadVisitorLocations,
+      5000
+    );
+
+  } catch (error) {
+    message.textContent = "ERROR: " + error.message;
+
+    log("Location link: " + error.message, "error");
+
+    button.disabled = false;
+    button.textContent = "CREATE LOCATION LINK";
+  }
+}
+
+$("createLocationLink")?.addEventListener(
+  "click",
+  createLocationLink
+);
+
+// COPY LOCATION LINK
+$("copyLocationLink")?.addEventListener(
+  "click",
+  async () => {
+    const input = $("locationConnectionLink");
+    const button = $("copyLocationLink");
+
+    if (!input || !button) return;
+
+    try {
+      await navigator.clipboard.writeText(input.value);
+
+      button.textContent = "COPIED!";
+      log("LOCATION LINK COPIED.", "green");
+
+      setTimeout(() => {
+        button.textContent = "КОПИРОВАТЬ";
+      }, 1500);
+
+    } catch {
+      input.select();
+      document.execCommand("copy");
+
+      button.textContent = "COPIED!";
+
+      setTimeout(() => {
+        button.textContent = "КОПИРОВАТЬ";
+      }, 1500);
+    }
+  }
+);
+
+// OWNER: LOAD LOCATION VISITORS
+async function loadVisitorLocations() {
+  if (!locationRoomCode || !locationOwnerToken) return;
+
+  try {
+    const response = await fetch(
+      "/api/location-link/" +
+      encodeURIComponent(locationRoomCode) +
+      "/visitors",
+      {
+        headers: {
+          "Authorization": "Bearer " + locationOwnerToken
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Could not load location data."
+      );
+    }
+
+    const list = $("visitorLocationList");
+
+    if (!list) return;
+
+    const visitors = Array.isArray(data.visitors)
+      ? data.visitors
+      : [];
+
+    if (visitors.length === 0) {
+      list.textContent =
+        "ОЖИДАНИЕ ДАННЫХ О МЕСТОПОЛОЖЕНИИ...";
+      return;
+    }
+
+    list.replaceChildren();
+
+    visitors.slice().reverse().forEach(visitor => {
+      const entry = document.createElement("div");
+      entry.className = "visitor-entry";
+
+      const title = document.createElement("strong");
+      title.textContent = "LOCATION RECEIVED";
+
+      const details = document.createElement("div");
+
+      const latitude = Number(visitor.latitude);
+      const longitude = Number(visitor.longitude);
+
+      const validCoordinates =
+        Number.isFinite(latitude) &&
+        Number.isFinite(longitude) &&
+        Math.abs(latitude) <= 90 &&
+        Math.abs(longitude) <= 180;
+
+      const rows = [];
+
+      if (visitor.country) {
+        rows.push("СТРАНА: " + visitor.country);
+      }
+
+      if (visitor.region) {
+        rows.push("ОБЛАСТЬ: " + visitor.region);
+      }
+
+      if (visitor.city) {
+        rows.push("ГОРОД: " + visitor.city);
+      }
+
+      if (visitor.district) {
+        rows.push("РАЙОН: " + visitor.district);
+      }
+
+      if (visitor.address) {
+        rows.push("АДРЕС: " + visitor.address);
+      }
+
+      if (validCoordinates) {
+        rows.push("LATITUDE: " + latitude);
+        rows.push("LONGITUDE: " + longitude);
+      }
+
+      if (visitor.accuracy !== undefined) {
+        rows.push("GPS ACCURACY: " + visitor.accuracy + " m");
+      }
+
+      rows.push(
+        "TIME: " +
+        new Date(visitor.timestamp).toLocaleString()
+      );
+
+      details.textContent = rows.join("\n");
+
+      entry.appendChild(title);
+      entry.appendChild(details);
+
+      if (validCoordinates) {
+        const mapLink = document.createElement("a");
+
+        mapLink.href =
+          "https://www.google.com/maps?q=" +
+          encodeURIComponent(latitude + "," + longitude);
+
+        mapLink.target = "_blank";
+        mapLink.rel = "noopener noreferrer";
+        mapLink.textContent = "OPEN ON MAP";
+
+        entry.appendChild(mapLink);
+
+        $("locationMapInfo").textContent =
+          "LATITUDE: " + latitude +
+          "\nLONGITUDE: " + longitude +
+          "\nACCURACY: " +
+          (visitor.accuracy ?? "UNKNOWN") + " m";
+
+        const mainMapLink = $("locationMapLink");
+
+        mainMapLink.href = mapLink.href;
+        mainMapLink.classList.remove("hidden");
+      }
+
+      list.appendChild(entry);
+
+      const visitorId =
+        visitor.id ||
+        String(visitor.timestamp) + ":" +
+        String(visitor.latitude) + ":" +
+        String(visitor.longitude);
+
+      if (!displayedLocationIds.has(visitorId)) {
+        displayedLocationIds.add(visitorId);
+
+        log("NEW CONSENTED LOCATION RECEIVED.", "green");
+
+        if (visitor.city) {
+          log("CITY: " + visitor.city, "green");
+        }
+
+        if (visitor.address) {
+          log("ADDRESS: " + visitor.address, "green");
+        }
+
+        if (validCoordinates) {
+          log(
+            "GPS: " + latitude + ", " + longitude,
+            "green"
+          );
+        }
+      }
+    });
+
+  } catch (error) {
+    log("Location list: " + error.message, "error");
+  }
+}
+
+// VISITOR: REQUEST LOCATION AFTER CONSENT
+async function allowLocationShare() {
+  const button = $("allowLocationShare");
+  const decline = $("declineLocationShare");
+  const result = $("visitorLocationResult");
+
+  if (!button || !decline || !result) return;
+
+  if (!navigator.geolocation) {
+    result.className = "device-info error";
+    result.textContent =
+      "ГЕОЛОКАЦИЯ НЕ ПОДДЕРЖИВАЕТСЯ ЭТИМ БРАУЗЕРОМ.";
+
+    return;
+  }
+
+  button.disabled = true;
+  decline.disabled = true;
+
+  result.className = "device-info";
+  result.textContent =
+    "ОЖИДАНИЕ РАЗРЕШЕНИЯ ГЕОЛОКАЦИИ БРАУЗЕРОМ...";
+
+  log("Visitor requested GPS permission.");
+
+  navigator.geolocation.getCurrentPosition(
+    async position => {
+      try {
+        result.textContent =
+          "РАЗРЕШЕНИЕ ПОЛУЧЕНО. ОТПРАВКА КООРДИНАТ...";
+
+        const response = await fetch(
+          "/api/location-link/" +
+          encodeURIComponent(locationLinkId) +
+          "/consent",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              consent: true,
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy
+            })
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || "Could not send location."
+          );
+        }
+
+        result.className = "device-info success";
+
+        result.textContent =
+          "МЕСТОПОЛОЖЕНИЕ УСПЕШНО ПЕРЕДАНО.\n" +
+          "LATITUDE: " + position.coords.latitude +
+          "\nLONGITUDE: " + position.coords.longitude +
+          "\nACCURACY: " + position.coords.accuracy + " m" +
+          "\nTIME: " + new Date().toLocaleString();
+
+        button.classList.add("hidden");
+        decline.classList.add("hidden");
+
+        log("Location voluntarily shared.", "green");
+
+      } catch (error) {
+        result.className = "device-info error";
+        result.textContent = "ERROR: " + error.message;
+
+        button.disabled = false;
+        decline.disabled = false;
+      }
+    },
+
+    error => {
+      result.className = "device-info error";
+
+      const messages = {
+        1: "ВЫ ОТКАЗАЛИ В ДОСТУПЕ К ГЕОЛОКАЦИИ.",
+        2: "МЕСТОПОЛОЖЕНИЕ НЕДОСТУПНО.",
+        3: "ВРЕМЯ ОЖИДАНИЯ ГЕОЛОКАЦИИ ИСТЕКЛО."
+      };
+
+      result.textContent =
+        messages[error.code] ||
+        "НЕ УДАЛОСЬ ПОЛУЧИТЬ МЕСТОПОЛОЖЕНИЕ.";
+
+      button.disabled = false;
+      decline.disabled = false;
+
+      log(result.textContent, "error");
+    },
+
+    {
+      enableHighAccuracy: true,
+      timeout: 20000,
+      maximumAge: 0
+    }
+  );
+}
+
+$("allowLocationShare")?.addEventListener(
+  "click",
+  allowLocationShare
+);
+
+// VISITOR: DECLINE LOCATION
+$("declineLocationShare")?.addEventListener(
+  "click",
+  () => {
+    const result = $("visitorLocationResult");
+
+    result.className = "device-info";
+    result.textContent =
+      "ВЫ ОТКАЗАЛИСЬ ОТ ПЕРЕДАЧИ МЕСТОПОЛОЖЕНИЯ.";
+
+    $("allowLocationShare").disabled = true;
+    $("declineLocationShare").disabled = true;
+
+    log("Visitor declined location sharing.");
+  }
+);
 
 // SERVER STATUS
 async function checkServer() {
@@ -409,7 +841,7 @@ function connectSocket(role, token = "") {
         token
       }
     });
-    
+
     socket.once("connect", () => resolve());
 
     socket.once("connect_error", error => {
@@ -826,11 +1258,31 @@ if ($("uptime")) {
 }
 
 // INITIAL PAGE SETUP
-if (isIpVisitor) {
+if (isLocationVisitor) {
   $("modeSelector")?.classList.add("hidden");
   $("ipPanel")?.classList.add("hidden");
   $("hostPanel")?.classList.add("hidden");
   $("guestPanel")?.classList.add("hidden");
+  $("visitorPanel")?.classList.add("hidden");
+  $("locationPanel")?.classList.add("hidden");
+
+  $("locationVisitorPanel")?.classList.remove("hidden");
+
+  if ($("status")) {
+    $("status").innerHTML =
+      '<span class="online-dot"></span> LOCATION CONSENT REQUEST';
+  }
+
+  log("LOCATION invitation opened.");
+  log("Waiting for visitor's explicit permission.");
+
+} else if (isIpVisitor) {
+  $("modeSelector")?.classList.add("hidden");
+  $("ipPanel")?.classList.add("hidden");
+  $("hostPanel")?.classList.add("hidden");
+  $("guestPanel")?.classList.add("hidden");
+  $("locationPanel")?.classList.add("hidden");
+  $("locationVisitorPanel")?.classList.add("hidden");
 
   $("visitorPanel")?.classList.remove("hidden");
 
@@ -847,6 +1299,8 @@ if (isIpVisitor) {
   $("ipPanel")?.classList.add("hidden");
   $("hostPanel")?.classList.add("hidden");
   $("visitorPanel")?.classList.add("hidden");
+  $("locationPanel")?.classList.add("hidden");
+  $("locationVisitorPanel")?.classList.add("hidden");
 
   $("guestPanel")?.classList.remove("hidden");
 
@@ -858,12 +1312,14 @@ if (isIpVisitor) {
 
 } else {
   $("visitorPanel")?.classList.add("hidden");
+  $("locationVisitorPanel")?.classList.add("hidden");
 
   switchMode("ip");
 
   checkServer();
 
-  log("HACKER TERMINAL v2.4");
+  log("HACKER TERMINAL v2.5");
   log("MULTI MODE SYSTEM initialized.", "green");
+  log("LOCATION TRACKER module loaded.", "green");
   log("Select an operation mode.");
 }
