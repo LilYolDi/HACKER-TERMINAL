@@ -1,3 +1,4 @@
+
 const $ = id => document.getElementById(id);
 
 const terminal = $("terminal");
@@ -16,6 +17,7 @@ let localStream = null;
 let ownerToken = "";
 let roomCode = "";
 let candidateQueue = [];
+let activeMode = "ip";
 
 const rtcConfig = {
   iceServers: [
@@ -25,6 +27,8 @@ const rtcConfig = {
 };
 
 function log(message, type = "") {
+  if (!terminal) return;
+
   const line = document.createElement("div");
   line.className = "line " + type;
   line.textContent = "> " + message;
@@ -34,12 +38,121 @@ function log(message, type = "") {
 }
 
 function setStatus(value) {
-  $("connectionStatus").textContent = value;
+  if ($("connectionStatus")) {
+    $("connectionStatus").textContent = value;
+  }
 }
 
 function showMessage(id, message) {
-  $(id).textContent = message;
+  if ($(id)) $(id).textContent = message;
 }
+
+// MODE SWITCHING
+function switchMode(mode) {
+  if (isGuest) return;
+
+  activeMode = mode;
+
+  const ipPanel = $("ipPanel");
+  const hostPanel = $("hostPanel");
+  const ipButton = $("ipModeButton");
+  const phoneButton = $("phoneModeButton");
+
+  if (mode === "ip") {
+    ipPanel.classList.remove("hidden");
+    hostPanel.classList.add("hidden");
+
+    ipButton.classList.add("active");
+    phoneButton.classList.remove("active");
+
+    log("IP ADDRESS LOOKUP mode activated.", "green");
+  } else {
+    ipPanel.classList.add("hidden");
+    hostPanel.classList.remove("hidden");
+
+    ipButton.classList.remove("active");
+    phoneButton.classList.add("active");
+
+    log("PHONE CONNECTION mode activated.", "green");
+  }
+}
+
+$("ipModeButton")?.addEventListener("click", () => {
+  switchMode("ip");
+});
+
+$("phoneModeButton")?.addEventListener("click", () => {
+  switchMode("phone");
+});
+
+// IP LOOKUP
+async function lookupIp() {
+  const input = $("ipTarget");
+  const result = $("ipResult");
+  const button = $("lookupIp");
+
+  const target = input.value.trim();
+
+  if (!target) {
+    result.textContent = "ENTER DOMAIN OR IP ADDRESS.";
+    result.className = "device-info error";
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "SEARCHING...";
+
+  result.className = "device-info";
+  result.textContent = "RESOLVING ADDRESS...";
+
+  log("Starting IP lookup: " + target);
+
+  try {
+    const response = await fetch("/api/lookup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ target })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "IP lookup failed.");
+    }
+
+    result.className = "device-info success";
+
+    result.textContent =
+      "TARGET: " + data.target +
+      "\nTYPE: " + data.type +
+      "\nIP ADDRESSES:\n" +
+      data.addresses.join("\n");
+
+    log("Lookup completed successfully.", "green");
+
+    data.addresses.forEach(address => {
+      log("RESOLVED IP: " + address, "green");
+    });
+
+  } catch (error) {
+    result.className = "device-info error";
+    result.textContent = "ERROR: " + error.message;
+
+    log(error.message, "error");
+
+  } finally {
+    button.disabled = false;
+    button.textContent = "ВЫЧИСЛИТЬ IP";
+  }
+}
+
+$("lookupIp")?.addEventListener("click", lookupIp);
+
+$("ipTarget")?.addEventListener("keydown", event => {
+  if (event.key === "Enter") lookupIp();
+});
 
 async function checkServer() {
   try {
@@ -47,8 +160,10 @@ async function checkServer() {
     const data = await response.json();
 
     $("serverStatus").textContent = data.status.toUpperCase();
+
     $("status").innerHTML =
       '<span class="online-dot"></span> SYSTEM ONLINE';
+
   } catch {
     $("serverStatus").textContent = "OFFLINE";
     $("status").textContent = "SERVER OFFLINE";
@@ -259,6 +374,7 @@ async function createSession() {
       "Waiting for phone connection...";
 
     button.textContent = "SESSION CREATED";
+
   } catch (error) {
     log(error.message, "error");
     button.disabled = false;
@@ -280,6 +396,7 @@ $("copyLink")?.addEventListener("click", async () => {
     setTimeout(() => {
       $("copyLink").textContent = "COPY";
     }, 1500);
+
   } catch {
     $("connectionLink").select();
     document.execCommand("copy");
@@ -300,7 +417,6 @@ async function acceptConnection() {
       );
     }
 
-    // Android browser will ask the user for camera and microphone permission.
     localStream = await navigator.mediaDevices.getUserMedia({
       video: true,
       audio: true
@@ -342,6 +458,7 @@ async function acceptConnection() {
     button.textContent = "CONNECTED";
 
     log("Device connection accepted.", "green");
+
   } catch (error) {
     button.disabled = false;
     button.textContent = "ACCEPT CONNECTION";
@@ -388,7 +505,7 @@ $("shareLocation")?.addEventListener("click", () => {
 
       log("Location shared.", "green");
     },
-    error => {
+    () => {
       showMessage(
         "guestMessage",
         "Location permission denied or unavailable."
@@ -471,10 +588,14 @@ setInterval(() => {
     Math.floor((seconds % 3600) / 60),
     seconds % 60
   ].map(n => String(n).padStart(2, "0")).join(":");
+
 }, 1000);
 
 // Initial page setup
 if (isGuest) {
+  $("modeSelector").classList.add("hidden");
+  $("ipPanel").classList.add("hidden");
+
   $("hostPanel").classList.add("hidden");
   $("guestPanel").classList.remove("hidden");
 
@@ -483,10 +604,13 @@ if (isGuest) {
 
   log("Android connection invitation opened.");
   log("Waiting for the device owner's approval.");
+
 } else {
+  switchMode("ip");
+
   checkServer();
 
-  log("HACKER TERMINAL v2.2");
-  log("WEB REMOTE CONNECT initialized.", "green");
-  log("Create a session to connect an Android device.");
+  log("HACKER TERMINAL v2.3");
+  log("MULTI MODE SYSTEM initialized.", "green");
+  log("Select an operation mode.");
 }
