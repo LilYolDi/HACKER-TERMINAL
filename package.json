@@ -1,8 +1,7 @@
-
 {
   "name": "hacker-terminal",
-  "version": "2.0.0",
-  "description": "Real Cybersecurity Diagnostic Terminal",
+  "version": "2.1.0",
+  "description": "Hacker Terminal with consent-based link tracker",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
