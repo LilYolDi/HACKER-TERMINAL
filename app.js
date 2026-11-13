@@ -7,7 +7,15 @@ const isGuest = /^\/connect\/[a-f0-9]{32}$/.test(
   window.location.pathname
 );
 
+const isIpVisitor = /^\/ip\/[a-f0-9]{32}$/.test(
+  window.location.pathname
+);
+
 const roomId = isGuest
+  ? window.location.pathname.split("/").pop()
+  : null;
+
+const ipLinkId = isIpVisitor
   ? window.location.pathname.split("/").pop()
   : null;
 
@@ -18,6 +26,7 @@ let ownerToken = "";
 let roomCode = "";
 let candidateQueue = [];
 let activeMode = "ip";
+let ipLinkRefreshTimer = null;
 
 const rtcConfig = {
   iceServers: [
@@ -49,7 +58,7 @@ function showMessage(id, message) {
 
 // MODE SWITCHING
 function switchMode(mode) {
-  if (isGuest) return;
+  if (isGuest || isIpVisitor) return;
 
   activeMode = mode;
 
@@ -154,22 +163,243 @@ $("ipTarget")?.addEventListener("keydown", event => {
   if (event.key === "Enter") lookupIp();
 });
 
+// CREATE IP LINK
+async function createIpLink() {
+  const button = $("createIpLink");
+  const area = $("ipLinkArea");
+  const message = $("ipLinkMessage");
+
+  button.disabled = true;
+  button.textContent = "СОЗДАНИЕ...";
+
+  try {
+    const response = await fetch("/api/ip-link/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({})
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not create IP link.");
+    }
+
+    ownerToken = data.ownerToken;
+    roomCode = data.linkId;
+
+    $("ipConnectionLink").value = data.link;
+
+    area.classList.remove("hidden");
+
+    message.textContent =
+      "ССЫЛКА СОЗДАНА. СРОК ДЕЙСТВИЯ: " + data.expiresIn;
+
+    log("Unique IP link created.", "green");
+    log("Link is ready to share.", "green");
+
+    button.textContent = "СОЗДАТЬ ЕЩЁ ССЫЛКУ";
+    button.disabled = false;
+
+    await loadVisitorIps();
+
+    if (ipLinkRefreshTimer) {
+      clearInterval(ipLinkRefreshTimer);
+    }
+
+    ipLinkRefreshTimer = setInterval(loadVisitorIps, 5000);
+
+  } catch (error) {
+    message.textContent = "ERROR: " + error.message;
+
+    log(error.message, "error");
+
+    button.disabled = false;
+    button.textContent = "СОЗДАТЬ ССЫЛКУ";
+  }
+}
+
+$("createIpLink")?.addEventListener("click", createIpLink);
+
+// COPY IP LINK
+$("copyIpLink")?.addEventListener("click", async () => {
+  const input = $("ipConnectionLink");
+  const button = $("copyIpLink");
+
+  try {
+    await navigator.clipboard.writeText(input.value);
+
+    button.textContent = "COPIED!";
+    log("IP link copied.", "green");
+
+    setTimeout(() => {
+      button.textContent = "COPY";
+    }, 1500);
+
+  } catch {
+    input.select();
+    document.execCommand("copy");
+
+    button.textContent = "COPIED!";
+
+    setTimeout(() => {
+      button.textContent = "COPY";
+    }, 1500);
+  }
+});
+
+// LOAD VISITOR IP LIST
+async function loadVisitorIps() {
+  if (!roomCode || !ownerToken) return;
+
+  try {
+    const response = await fetch(
+      "/api/ip-link/" + roomCode + "/visitors",
+      {
+        headers: {
+          "Authorization": "Bearer " + ownerToken
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load visitor list.");
+    }
+
+    const list = $("visitorIpList");
+    if (!list) return;
+
+    if (!data.visitors || data.visitors.length === 0) {
+      list.textContent = "ОЖИДАНИЕ ПОСЕТИТЕЛЕЙ...";
+      return;
+    }
+
+    list.replaceChildren();
+
+    data.visitors.slice().reverse().forEach(visitor => {
+      const entry = document.createElement("div");
+      entry.className = "visitor-entry";
+
+      const ip = document.createElement("strong");
+      ip.textContent = "IP: " + visitor.ip;
+
+      const date = document.createElement("div");
+      date.textContent =
+        "TIME: " + new Date(visitor.timestamp).toLocaleString();
+
+      entry.appendChild(ip);
+      entry.appendChild(date);
+
+      list.appendChild(entry);
+    });
+
+    if (data.visitors.length > 0) {
+      log(
+        "Visitor IP list updated. Total: " + data.visitors.length,
+        "green"
+      );
+    }
+
+  } catch (error) {
+    log("Visitor list: " + error.message, "error");
+  }
+}
+
+// VISITOR: GIVE CONSENT
+async function allowIpShare() {
+  const button = $("allowIpShare");
+  const decline = $("declineIpShare");
+  const result = $("visitorIpResult");
+
+  button.disabled = true;
+  decline.disabled = true;
+
+  result.className = "device-info";
+  result.textContent = "SENDING CONSENTED NETWORK INFORMATION...";
+
+  try {
+    const response = await fetch(
+      "/api/ip-link/" + ipLinkId + "/consent",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          consent: true
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not send IP information.");
+    }
+
+    result.className = "device-info success";
+    result.textContent =
+      "ПЕРЕДАЧА ПОДТВЕРЖДЕНА\n" +
+      "ВАШ ПУБЛИЧНЫЙ IP: " + data.ip +
+      "\nВРЕМЯ: " + new Date(data.timestamp).toLocaleString();
+
+    $("allowIpShare").classList.add("hidden");
+    $("declineIpShare").classList.add("hidden");
+
+  } catch (error) {
+    result.className = "device-info error";
+    result.textContent = "ERROR: " + error.message;
+
+    button.disabled = false;
+    decline.disabled = false;
+  }
+}
+
+$("allowIpShare")?.addEventListener("click", allowIpShare);
+
+// VISITOR: DECLINE
+$("declineIpShare")?.addEventListener("click", () => {
+  $("visitorIpResult").className = "device-info";
+  $("visitorIpResult").textContent =
+    "ВЫ ОТКАЗАЛИСЬ ОТ ПЕРЕДАЧИ IP-АДРЕСА.";
+
+  $("allowIpShare").disabled = true;
+  $("declineIpShare").disabled = true;
+
+  log("Visitor declined IP sharing.");
+});
+
+// SERVER STATUS
 async function checkServer() {
   try {
     const response = await fetch("/api/status");
     const data = await response.json();
 
-    $("serverStatus").textContent = data.status.toUpperCase();
+    if ($("serverStatus")) {
+      $("serverStatus").textContent = data.status.toUpperCase();
+    }
 
-    $("status").innerHTML =
-      '<span class="online-dot"></span> SYSTEM ONLINE';
+    if ($("status")) {
+      $("status").innerHTML =
+        '<span class="online-dot"></span> SYSTEM ONLINE';
+    }
 
   } catch {
-    $("serverStatus").textContent = "OFFLINE";
-    $("status").textContent = "SERVER OFFLINE";
+    if ($("serverStatus")) {
+      $("serverStatus").textContent = "OFFLINE";
+    }
+
+    if ($("status")) {
+      $("status").textContent = "SERVER OFFLINE";
+    }
   }
 }
 
+// SOCKET CONNECTION
 function connectSocket(role, token = "") {
   return new Promise((resolve, reject) => {
     socket = io({
@@ -210,6 +440,7 @@ function connectSocket(role, token = "") {
   });
 }
 
+// WEBRTC
 function createPeer() {
   closePeer();
 
@@ -298,7 +529,7 @@ async function receiveSignal(data) {
   }
 }
 
-// COMPUTER: create a new session
+// COMPUTER: CREATE PHONE SESSION
 async function createSession() {
   const button = $("createSession");
 
@@ -384,7 +615,7 @@ async function createSession() {
 
 $("createSession")?.addEventListener("click", createSession);
 
-// Copy invitation link
+// COPY PHONE INVITATION LINK
 $("copyLink")?.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(
@@ -403,7 +634,7 @@ $("copyLink")?.addEventListener("click", async () => {
   }
 });
 
-// ANDROID: accept the connection
+// ANDROID: ACCEPT CONNECTION
 async function acceptConnection() {
   const button = $("acceptConnection");
 
@@ -478,7 +709,7 @@ $("acceptConnection")?.addEventListener(
   acceptConnection
 );
 
-// ANDROID: voluntarily share location
+// ANDROID: VOLUNTARILY SHARE LOCATION
 $("shareLocation")?.addEventListener("click", () => {
   if (!navigator.geolocation) {
     showMessage(
@@ -518,6 +749,7 @@ $("shareLocation")?.addEventListener("click", () => {
   );
 });
 
+// DISCONNECT
 function closePeer() {
   if (peer) {
     peer.ontrack = null;
@@ -577,27 +809,46 @@ $("stopConnection")?.addEventListener("click", () => {
   $("acceptConnection").textContent = "ACCEPT CONNECTION";
 });
 
-// Uptime
+// UPTIME
 const startTime = Date.now();
 
-setInterval(() => {
-  const seconds = Math.floor((Date.now() - startTime) / 1000);
+if ($("uptime")) {
+  setInterval(() => {
+    const seconds = Math.floor((Date.now() - startTime) / 1000);
 
-  $("uptime").textContent = [
-    Math.floor(seconds / 3600),
-    Math.floor((seconds % 3600) / 60),
-    seconds % 60
-  ].map(n => String(n).padStart(2, "0")).join(":");
+    $("uptime").textContent = [
+      Math.floor(seconds / 3600),
+      Math.floor((seconds % 3600) / 60),
+      seconds % 60
+    ].map(n => String(n).padStart(2, "0")).join(":");
 
-}, 1000);
+  }, 1000);
+}
 
-// Initial page setup
-if (isGuest) {
-  $("modeSelector").classList.add("hidden");
-  $("ipPanel").classList.add("hidden");
+// INITIAL PAGE SETUP
+if (isIpVisitor) {
+  $("modeSelector")?.classList.add("hidden");
+  $("ipPanel")?.classList.add("hidden");
+  $("hostPanel")?.classList.add("hidden");
+  $("guestPanel")?.classList.add("hidden");
 
-  $("hostPanel").classList.add("hidden");
-  $("guestPanel").classList.remove("hidden");
+  $("visitorPanel")?.classList.remove("hidden");
+
+  if ($("status")) {
+    $("status").innerHTML =
+      '<span class="online-dot"></span> IP CONSENT REQUEST';
+  }
+
+  log("IP information request opened.");
+  log("Waiting for visitor consent.");
+
+} else if (isGuest) {
+  $("modeSelector")?.classList.add("hidden");
+  $("ipPanel")?.classList.add("hidden");
+  $("hostPanel")?.classList.add("hidden");
+  $("visitorPanel")?.classList.add("hidden");
+
+  $("guestPanel")?.classList.remove("hidden");
 
   $("status").innerHTML =
     '<span class="online-dot"></span> CONNECTION INVITATION';
@@ -606,11 +857,13 @@ if (isGuest) {
   log("Waiting for the device owner's approval.");
 
 } else {
+  $("visitorPanel")?.classList.add("hidden");
+
   switchMode("ip");
 
   checkServer();
 
-  log("HACKER TERMINAL v2.3");
+  log("HACKER TERMINAL v2.4");
   log("MULTI MODE SYSTEM initialized.", "green");
   log("Select an operation mode.");
 }
