@@ -1,313 +1,47 @@
 const $ = id => document.getElementById(id);
 
 const terminal = $("terminal");
-const results = $("results");
 
-let target = "";
-let busy = false;
-let currentTrackerId = "";
+const isGuest = /^\/connect\/[a-f0-9]{32}$/.test(
+  window.location.pathname
+);
+
+const roomId = isGuest
+  ? window.location.pathname.split("/").pop()
+  : null;
+
+let socket = null;
+let peer = null;
+let localStream = null;
 let ownerToken = "";
-let pollTimer = null;
+let roomCode = "";
+let candidateQueue = [];
 
-const start = Date.now();
+const rtcConfig = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" }
+  ]
+};
 
 function log(message, type = "") {
   const line = document.createElement("div");
   line.className = "line " + type;
   line.textContent = "> " + message;
+
   terminal.appendChild(line);
   terminal.scrollTop = terminal.scrollHeight;
 }
 
-function print(data) {
-  results.textContent = JSON.stringify(data, null, 2);
+function setStatus(value) {
+  $("connectionStatus").textContent = value;
 }
 
-async function api(endpoint) {
-  if (!target) {
-    throw new Error("Set an authorized target domain first.");
-  }
-
-  const response = await fetch("/api/" + endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ host: target })
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || "Request failed");
-  }
-
-  return data;
+function showMessage(id, message) {
+  $(id).textContent = message;
 }
 
-async function run(command) {
-  command = command.toLowerCase().trim();
-
-  if (!command) return;
-
-  log("root@hacker:~$ " + command);
-
-  if (busy) {
-    log("Wait for the current check.", "warning");
-    return;
-  }
-
-  if (command === "help") {
-    log("dns     - real DNS analysis");
-    log("ssl     - SSL certificate check");
-    log("headers - HTTP security headers");
-    log("ports   - check selected TCP ports");
-    log("status  - server status");
-    log("clear   - clear terminal");
-    log("tracker - generate a tracking link");
-    return;
-  }
-
-  if (command === "clear") {
-    terminal.textContent = "";
-    results.textContent = "Waiting for command...";
-    return;
-  }
-
-  if (command === "tracker") {
-    await generateTrackingLink();
-    return;
-  }
-
-  if (command === "status") {
-    log("Checking server...");
-
-    try {
-      const response = await fetch("/api/status");
-      const data = await response.json();
-
-      print(data);
-      log("Server: " + data.status, "green");
-    } catch (error) {
-      log(error.message, "error");
-    }
-
-    return;
-  }
-
-  if (!["dns", "ssl", "headers", "ports"].includes(command)) {
-    log("Unknown command. Type help.", "error");
-    return;
-  }
-
-  busy = true;
-  log("Running real " + command.toUpperCase() + " check...");
-
-  try {
-    const data = await api(command);
-    print(data);
-    log(command.toUpperCase() + " completed successfully.", "green");
-  } catch (error) {
-    print({ error: error.message });
-    log(error.message, "error");
-  } finally {
-    busy = false;
-  }
-}
-
-// Select target domain
-$("setTarget").addEventListener("click", () => {
-  const value = $("host").value.trim().toLowerCase();
-
-  if (!/^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(\.([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*$/.test(value)) {
-    log("Enter a valid domain name.", "error");
-    return;
-  }
-
-  target = value;
-
-  log("Target selected: " + target, "green");
-  log("Server authorization is still required.", "warning");
-});
-
-// Terminal form
-$("commandForm").addEventListener("submit", event => {
-  event.preventDefault();
-
-  const value = $("command").value;
-  $("command").value = "";
-
-  run(value);
-});
-
-// Operation buttons
-document.querySelectorAll("[data-cmd]").forEach(button => {
-  button.addEventListener("click", () => {
-    run(button.dataset.cmd);
-  });
-});
-
-// Generate tracking link
-async function generateTrackingLink() {
-  const button = $("generateLink");
-
-  button.disabled = true;
-  button.textContent = "GENERATING...";
-
-  try {
-    const response = await fetch("/api/track/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({})
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Could not create link");
-    }
-
-    const url = new URL(data.link);
-    currentTrackerId = url.pathname.split("/").pop();
-    ownerToken = data.ownerToken;
-
-    sessionStorage.setItem("hackerTrackerId", currentTrackerId);
-    sessionStorage.setItem("hackerOwnerToken", ownerToken);
-
-    $("trackingLink").value = data.link;
-    $("linkExpiry").textContent = "Link expires in " + data.expiresIn;
-    $("linkArea").classList.remove("hidden");
-
-    $("visitorLog").innerHTML =
-      '<p class="empty-log">Waiting for visitors...</p>';
-
-    $("visitorCount").textContent = "0 VISITS";
-
-    log("Unique tracking link generated.", "green");
-    log("Visitor consent is required before IP recording.", "warning");
-
-    startPolling();
-  } catch (error) {
-    log(error.message, "error");
-  } finally {
-    button.disabled = false;
-    button.textContent = "GENERATE LINK";
-  }
-}
-
-$("generateLink").addEventListener("click", generateTrackingLink);
-
-// Copy tracking link
-$("copyLink").addEventListener("click", async () => {
-  const value = $("trackingLink").value;
-
-  try {
-    await navigator.clipboard.writeText(value);
-    $("copyLink").textContent = "COPIED!";
-    setTimeout(() => {
-      $("copyLink").textContent = "COPY";
-    }, 1500);
-  } catch {
-    $("trackingLink").select();
-    document.execCommand("copy");
-    $("copyLink").textContent = "COPIED!";
-  }
-});
-
-// Poll visitor events using the private owner token
-async function loadEvents() {
-  if (!currentTrackerId || !ownerToken) return;
-
-  try {
-    const response = await fetch(
-      "/api/track/" + encodeURIComponent(currentTrackerId) + "/events",
-      {
-        headers: {
-          Authorization: "Bearer " + ownerToken
-        }
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Could not load visitor log");
-    }
-
-    renderEvents(data.events || []);
-  } catch (error) {
-    log("Tracker update: " + error.message, "error");
-    stopPolling();
-  }
-}
-
-function renderEvents(events) {
-  $("visitorCount").textContent =
-    events.length + (events.length === 1 ? " VISIT" : " VISITS");
-
-  const container = $("visitorLog");
-  container.textContent = "";
-
-  if (!events.length) {
-    const empty = document.createElement("p");
-    empty.className = "empty-log";
-    empty.textContent = "No visitors yet.";
-    container.appendChild(empty);
-    return;
-  }
-
-  events.slice().reverse().forEach(event => {
-    const entry = document.createElement("div");
-    entry.className = "visitor-entry";
-
-    const ip = document.createElement("div");
-    ip.textContent = "IP: " + event.ip;
-
-    const time = document.createElement("div");
-    time.textContent = "TIME: " + new Date(event.time).toLocaleString();
-
-    const status = document.createElement("div");
-    status.textContent = "STATUS: " + event.status;
-
-    entry.append(ip, time, status);
-    container.appendChild(entry);
-  });
-
-  log("Visitor log updated: " + events.length + " consented visit(s).", "green");
-}
-
-function startPolling() {
-  stopPolling();
-  loadEvents();
-  pollTimer = setInterval(loadEvents, 5000);
-}
-
-function stopPolling() {
-  if (pollTimer) {
-    clearInterval(pollTimer);
-    pollTimer = null;
-  }
-}
-
-// Restore current tracker after page refresh in this browser tab
-function restoreTracker() {
-  const savedId = sessionStorage.getItem("hackerTrackerId");
-  const savedToken = sessionStorage.getItem("hackerOwnerToken");
-
-  if (!savedId || !savedToken) return;
-
-  currentTrackerId = savedId;
-  ownerToken = savedToken;
-
-  $("trackingLink").value =
-    window.location.origin + "/t/" + currentTrackerId;
-
-  $("linkArea").classList.remove("hidden");
-
-  log("Previous tracking session restored.", "green");
-  startPolling();
-}
-
-// Server status
-async function checkStatus() {
+async function checkServer() {
   try {
     const response = await fetch("/api/status");
     const data = await response.json();
@@ -321,22 +55,438 @@ async function checkStatus() {
   }
 }
 
-// Uptime counter
+function connectSocket(role, token = "") {
+  return new Promise((resolve, reject) => {
+    socket = io({
+      auth: {
+        roomId,
+        role,
+        token
+      }
+    });
+
+    socket.once("connect", () => resolve());
+
+    socket.once("connect_error", error => {
+      reject(error);
+    });
+
+    socket.on("disconnect", () => {
+      log("Signaling connection disconnected.", "error");
+      setStatus("DISCONNECTED");
+    });
+
+    socket.on("room-expired", () => {
+      log("Connection room expired.", "error");
+      disconnectEverything();
+    });
+
+    socket.on("host-disconnected", () => {
+      log("Computer disconnected.", "error");
+      showMessage("guestMessage", "Computer disconnected.");
+      disconnectEverything();
+    });
+
+    socket.on("device-disconnected", () => {
+      log("Phone disconnected.", "error");
+      setStatus("DEVICE OFFLINE");
+      closePeer();
+    });
+  });
+}
+
+function createPeer() {
+  closePeer();
+
+  peer = new RTCPeerConnection(rtcConfig);
+
+  peer.onicecandidate = event => {
+    if (event.candidate && socket?.connected) {
+      socket.emit("signal", {
+        type: "ice",
+        candidate: event.candidate
+      });
+    }
+  };
+
+  peer.onconnectionstatechange = () => {
+    if (!peer) return;
+
+    log("WebRTC: " + peer.connectionState);
+
+    if (peer.connectionState === "connected") {
+      setStatus("CONNECTED");
+      $("disconnect").disabled = false;
+    }
+
+    if (
+      peer.connectionState === "failed" ||
+      peer.connectionState === "disconnected"
+    ) {
+      setStatus("CONNECTION LOST");
+    }
+  };
+
+  return peer;
+}
+
+async function addQueuedCandidates() {
+  if (!peer || !peer.remoteDescription) return;
+
+  for (const candidate of candidateQueue) {
+    try {
+      await peer.addIceCandidate(candidate);
+    } catch (error) {
+      log("ICE candidate error: " + error.message, "error");
+    }
+  }
+
+  candidateQueue = [];
+}
+
+async function receiveSignal(data) {
+  if (!data || !peer) return;
+
+  try {
+    if (data.type === "ice") {
+      if (peer.remoteDescription) {
+        await peer.addIceCandidate(data.candidate);
+      } else {
+        candidateQueue.push(data.candidate);
+      }
+      return;
+    }
+
+    if (data.type === "offer" && !isGuest) {
+      await peer.setRemoteDescription(data.description);
+      await addQueuedCandidates();
+
+      const answer = await peer.createAnswer();
+      await peer.setLocalDescription(answer);
+
+      socket.emit("signal", {
+        type: "answer",
+        description: peer.localDescription
+      });
+
+      log("WebRTC answer sent.", "green");
+    }
+
+    if (data.type === "answer" && isGuest) {
+      await peer.setRemoteDescription(data.description);
+      await addQueuedCandidates();
+
+      log("WebRTC connection established.", "green");
+    }
+  } catch (error) {
+    log("Signal error: " + error.message, "error");
+  }
+}
+
+// COMPUTER: create a new session
+async function createSession() {
+  const button = $("createSession");
+
+  button.disabled = true;
+  button.textContent = "CREATING...";
+
+  try {
+    const response = await fetch("/api/remote/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({})
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not create session");
+    }
+
+    roomCode = data.roomId;
+    ownerToken = data.ownerToken;
+
+    const link = window.location.origin + "/connect/" + roomCode;
+
+    $("connectionLink").value = link;
+    $("sessionExpiry").textContent =
+      "Session expires in " + data.expiresIn;
+
+    $("sessionArea").classList.remove("hidden");
+
+    setStatus("WAITING FOR PHONE");
+
+    log("Private session created.", "green");
+    log("Send the connection link to your Android phone.");
+
+    await connectSocket("host", ownerToken);
+
+    socket.on("signal", receiveSignal);
+
+    socket.on("guest-ready", () => {
+      log("Android device accepted the session.", "green");
+      setStatus("DEVICE CONNECTING");
+    });
+
+    socket.on("device-location", data => {
+      $("locationInfo").textContent =
+        "LATITUDE: " + data.latitude +
+        " | LONGITUDE: " + data.longitude +
+        " | ACCURACY: " + (data.accuracy || "unknown") + " m";
+
+      log("Location voluntarily shared by phone.", "green");
+    });
+
+    socket.on("device-disconnected", () => {
+      $("deviceInfo").textContent = "NO DEVICE CONNECTED";
+      $("remoteVideo").srcObject = null;
+      $("videoPlaceholder").classList.remove("hidden");
+      $("disconnect").disabled = true;
+    });
+
+    createPeer();
+
+    peer.ontrack = event => {
+      $("remoteVideo").srcObject = event.streams[0];
+      $("videoPlaceholder").classList.add("hidden");
+      $("deviceInfo").textContent = "ANDROID DEVICE STREAM ACTIVE";
+      log("Remote camera stream received.", "green");
+    };
+
+    $("sessionMessage").textContent =
+      "Waiting for phone connection...";
+
+    button.textContent = "SESSION CREATED";
+  } catch (error) {
+    log(error.message, "error");
+    button.disabled = false;
+    button.textContent = "CREATE CONNECTION";
+  }
+}
+
+$("createSession")?.addEventListener("click", createSession);
+
+// Copy invitation link
+$("copyLink")?.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(
+      $("connectionLink").value
+    );
+
+    $("copyLink").textContent = "COPIED!";
+
+    setTimeout(() => {
+      $("copyLink").textContent = "COPY";
+    }, 1500);
+  } catch {
+    $("connectionLink").select();
+    document.execCommand("copy");
+  }
+});
+
+// ANDROID: accept the connection
+async function acceptConnection() {
+  const button = $("acceptConnection");
+
+  button.disabled = true;
+  button.textContent = "REQUESTING PERMISSIONS...";
+
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error(
+        "Camera access requires a supported browser and HTTPS."
+      );
+    }
+
+    // Android browser will ask the user for camera and microphone permission.
+    localStream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true
+    });
+
+    $("localVideo").srcObject = localStream;
+
+    showMessage(
+      "guestMessage",
+      "Camera and microphone enabled. Connecting..."
+    );
+
+    await connectSocket("guest");
+
+    socket.on("signal", receiveSignal);
+
+    createPeer();
+
+    localStream.getTracks().forEach(track => {
+      peer.addTrack(track, localStream);
+    });
+
+    const offer = await peer.createOffer();
+
+    await peer.setLocalDescription(offer);
+
+    socket.emit("signal", {
+      type: "offer",
+      description: peer.localDescription
+    });
+
+    $("guestControls").classList.remove("hidden");
+
+    showMessage(
+      "guestMessage",
+      "Connection request sent. You can disconnect at any time."
+    );
+
+    button.textContent = "CONNECTED";
+
+    log("Device connection accepted.", "green");
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "ACCEPT CONNECTION";
+
+    showMessage("guestMessage", error.message);
+    log(error.message, "error");
+
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+      localStream = null;
+    }
+  }
+}
+
+$("acceptConnection")?.addEventListener(
+  "click",
+  acceptConnection
+);
+
+// ANDROID: voluntarily share location
+$("shareLocation")?.addEventListener("click", () => {
+  if (!navigator.geolocation) {
+    showMessage(
+      "guestMessage",
+      "Geolocation is not supported by this browser."
+    );
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      if (!socket?.connected) return;
+
+      socket.emit("device-location", {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy
+      });
+
+      showMessage(
+        "guestMessage",
+        "Location shared with the connected computer."
+      );
+
+      log("Location shared.", "green");
+    },
+    error => {
+      showMessage(
+        "guestMessage",
+        "Location permission denied or unavailable."
+      );
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000
+    }
+  );
+});
+
+function closePeer() {
+  if (peer) {
+    peer.ontrack = null;
+    peer.close();
+    peer = null;
+  }
+
+  candidateQueue = [];
+
+  if ($("remoteVideo")) {
+    $("remoteVideo").srcObject = null;
+    $("videoPlaceholder").classList.remove("hidden");
+  }
+
+  if ($("localVideo")) {
+    $("localVideo").srcObject = null;
+  }
+}
+
+function disconnectEverything() {
+  closePeer();
+
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop());
+    localStream = null;
+  }
+
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+
+  setStatus("DISCONNECTED");
+
+  if ($("disconnect")) {
+    $("disconnect").disabled = true;
+  }
+
+  if ($("guestControls")) {
+    $("guestControls").classList.add("hidden");
+  }
+}
+
+$("disconnect")?.addEventListener("click", () => {
+  disconnectEverything();
+
+  $("deviceInfo").textContent = "NO DEVICE CONNECTED";
+
+  log("Session disconnected.", "green");
+});
+
+$("stopConnection")?.addEventListener("click", () => {
+  disconnectEverything();
+
+  showMessage("guestMessage", "You disconnected the session.");
+  $("acceptConnection").disabled = false;
+  $("acceptConnection").textContent = "ACCEPT CONNECTION";
+});
+
+// Uptime
+const startTime = Date.now();
+
 setInterval(() => {
-  const seconds = Math.floor((Date.now() - start) / 1000);
+  const seconds = Math.floor((Date.now() - startTime) / 1000);
 
   $("uptime").textContent = [
     Math.floor(seconds / 3600),
     Math.floor((seconds % 3600) / 60),
     seconds % 60
-  ].map(number => String(number).padStart(2, "0")).join(":");
+  ].map(n => String(n).padStart(2, "0")).join(":");
 }, 1000);
 
-// Initialize
-checkStatus();
-restoreTracker();
+// Initial page setup
+if (isGuest) {
+  $("hostPanel").classList.add("hidden");
+  $("guestPanel").classList.remove("hidden");
 
-log("HACKER TERMINAL v2.1");
-log("Real diagnostic modules initialized.", "green");
-log("LINK TRACKER initialized.", "green");
-log("Type HELP to see available commands.");
+  $("status").innerHTML =
+    '<span class="online-dot"></span> CONNECTION INVITATION';
+
+  log("Android connection invitation opened.");
+  log("Waiting for the device owner's approval.");
+} else {
+  checkServer();
+
+  log("HACKER TERMINAL v2.2");
+  log("WEB REMOTE CONNECT initialized.", "green");
+  log("Create a session to connect an Android device.");
+}
