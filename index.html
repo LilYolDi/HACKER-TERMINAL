@@ -1,0 +1,101 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#020603">
+  <title>HACKER TERMINAL</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="scanlines"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">[ H ]</span>
+    HACKER TERMINAL
+  </div>
+  <div class="status">
+    <span class="online-dot"></span> SYSTEM ONLINE
+  </div>
+  <button id="fullscreenBtn" class="small-btn">FULLSCREEN</button>
+</header>
+
+<main class="dashboard">
+
+  <section class="hero">
+    <div class="subtitle">ADVANCED CYBER SIMULATION SYSTEM</div>
+    <h1>HACKER<span>_</span>TERMINAL</h1>
+    <p>WELCOME TO THE SYSTEM</p>
+  </section>
+
+  <section class="stats">
+    <div class="stat">
+      <small>SYSTEM STATUS</small>
+      <strong class="green">ACTIVE</strong>
+    </div>
+    <div class="stat">
+      <small>CONNECTION</small>
+      <strong id="connection">SECURE</strong>
+    </div>
+    <div class="stat">
+      <small>UPTIME</small>
+      <strong id="uptime">00:00:00</strong>
+    </div>
+  </section>
+
+  <section class="terminal-panel">
+    <div class="panel-header">
+      <span>ROOT TERMINAL</span>
+      <span class="green">● LIVE</span>
+    </div>
+
+    <div id="terminal" class="terminal">
+      <div class="line">HACKER TERMINAL v1.0</div>
+      <div class="line">Initializing simulation environment...</div>
+      <div class="line green">SYSTEM READY.</div>
+      <div class="line">Type HELP to see available commands.</div>
+    </div>
+
+    <form id="commandForm" class="command-form">
+      <span>root@terminal:~$</span>
+      <input id="commandInput" autocomplete="off"
+        spellcheck="false" placeholder="Enter command...">
+      <button type="submit">EXECUTE</button>
+    </form>
+  </section>
+
+  <section class="controls">
+    <div class="section-title">OPERATIONS</div>
+    <div class="button-grid">
+      <button data-command="hack">START HACK</button>
+      <button data-command="scan">SCAN NETWORK</button>
+      <button data-command="trace">TRACE IP</button>
+      <button data-command="decrypt">DECRYPT DATA</button>
+      <button data-command="firewall">FIREWALL TEST</button>
+      <button data-command="matrix">MATRIX MODE</button>
+    </div>
+  </section>
+
+  <section class="progress-panel">
+    <div class="progress-heading">
+      <span id="operationName">SYSTEM IDLE</span>
+      <span id="progressValue">0%</span>
+    </div>
+    <div class="progress-track">
+      <div id="progressBar"></div>
+    </div>
+  </section>
+
+  <footer>
+    HACKER TERMINAL © 2026
+    <span>SIMULATION ONLY // NO REAL NETWORK ACCESS</span>
+  </footer>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
