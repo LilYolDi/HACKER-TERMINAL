@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#020603">
 <title>HACKER TERMINAL</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
 <header class="topbar">
   <div class="brand"><span class="logo">H</span> HACKER TERMINAL</div>
-  <div class="status" id="status">
+  <div id="status" class="status">
     <span class="online-dot"></span> CONNECTING
   </div>
 </header>
@@ -21,106 +21,129 @@
   <section class="hero">
     <p>CYBER SECURITY DIAGNOSTIC SYSTEM</p>
     <h1>HACKER_TERMINAL<span>_</span></h1>
-    <small class="subtitle">REAL SECURITY ANALYSIS</small>
+    <small class="subtitle">WEB REMOTE CONNECT v2.2</small>
   </section>
 
-  <section class="target">
-    <label for="host">AUTHORIZED TARGET DOMAIN</label>
-    <div class="target-input">
-      <input id="host" placeholder="your-domain.com">
-      <button id="setTarget">SET TARGET</button>
-    </div>
-    <p>Only domains you own or have permission to test.</p>
-  </section>
+  <!-- COMPUTER DASHBOARD -->
+  <section id="hostPanel">
 
-  <section class="stats">
-    <div class="stat">
-      <small>SERVER</small>
-      <strong id="serverStatus">CHECKING</strong>
-    </div>
-    <div class="stat">
-      <small>MODE</small>
-      <strong>REAL</strong>
-    </div>
-    <div class="stat">
-      <small>UPTIME</small>
-      <strong id="uptime">00:00:00</strong>
-    </div>
-  </section>
-
-  <section class="terminal-panel">
-    <div class="panel-header">
-      ROOT TERMINAL
-      <span>● LIVE</span>
-    </div>
-
-    <div class="terminal" id="terminal"></div>
-
-    <form class="command-form" id="commandForm">
-      <span>root@hacker:~$</span>
-      <input id="command" placeholder="Type help..." autocomplete="off">
-      <button type="submit">RUN</button>
-    </form>
-  </section>
-
-  <section class="controls">
-    <h2 class="section-title">SECURITY OPERATIONS</h2>
-
-    <div class="button-grid">
-      <button data-cmd="dns">DNS ANALYSIS</button>
-      <button data-cmd="ssl">SSL CHECK</button>
-      <button data-cmd="headers">HTTP HEADERS</button>
-      <button data-cmd="ports">PORT CHECK</button>
-      <button data-cmd="status">SYSTEM STATUS</button>
-      <button data-cmd="clear">CLEAR TERMINAL</button>
-    </div>
-  </section>
-
-  <section class="progress-panel">
-    <h2 class="section-title">LINK TRACKER</h2>
-    <p class="tracker-description">
-      Generate a unique link. The visitor must explicitly agree
-      before their public IP address is recorded.
-    </p>
-
-    <button id="generateLink" class="generate-button">
-      GENERATE LINK
-    </button>
-
-    <div id="linkArea" class="link-area hidden">
-      <label>YOUR TRACKING LINK</label>
-      <div class="link-row">
-        <input id="trackingLink" readonly>
-        <button id="copyLink">COPY</button>
+    <section class="stats">
+      <div class="stat">
+        <small>SERVER</small>
+        <strong id="serverStatus">CHECKING</strong>
       </div>
-      <p id="linkExpiry"></p>
-      <p class="private-note">
-        Keep the owner access token private. It grants access to visit records.
+      <div class="stat">
+        <small>CONNECTION</small>
+        <strong id="connectionStatus">OFFLINE</strong>
+      </div>
+      <div class="stat">
+        <small>UPTIME</small>
+        <strong id="uptime">00:00:00</strong>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title">REMOTE DEVICE CONNECT</h2>
+      <p class="description">
+        Create a private session and open the generated link on your Android phone.
       </p>
-    </div>
 
-    <div class="visitors">
-      <div class="visitor-heading">
-        <strong>VISITOR LOG</strong>
-        <span id="visitorCount">0 VISITS</span>
+      <button id="createSession" class="main-button">
+        CREATE CONNECTION
+      </button>
+
+      <div id="sessionArea" class="hidden">
+        <label>PHONE CONNECTION LINK</label>
+
+        <div class="link-row">
+          <input id="connectionLink" readonly>
+          <button id="copyLink">COPY</button>
+        </div>
+
+        <p id="sessionExpiry" class="muted"></p>
+        <p id="sessionMessage" class="muted">
+          Waiting for phone confirmation...
+        </p>
       </div>
-      <div id="visitorLog">
-        <p class="empty-log">No visitors yet.</p>
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title">CONNECTED DEVICE</h2>
+
+      <div id="deviceInfo" class="device-info">
+        NO DEVICE CONNECTED
       </div>
-    </div>
+
+      <div class="video-container">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div id="videoPlaceholder">DEVICE CAMERA STREAM</div>
+      </div>
+
+      <div class="controls">
+        <button id="disconnect" disabled>DISCONNECT</button>
+      </div>
+
+      <div id="locationInfo" class="device-info">
+        LOCATION NOT SHARED
+      </div>
+    </section>
+
   </section>
 
-  <section class="results">
-    <h2 class="section-title">ANALYSIS RESULTS</h2>
-    <pre id="results">Waiting for command...</pre>
+  <!-- ANDROID PHONE PAGE -->
+  <section id="guestPanel" class="hidden">
+
+    <section class="panel">
+      <h2 class="section-title">DEVICE CONNECTION REQUEST</h2>
+
+      <p class="description">
+        A computer is requesting a connection to this phone.
+        If you accept, your camera and microphone can be shared
+        with the computer during this session.
+      </p>
+
+      <p class="warning">
+        Your camera and microphone are not activated until you press ACCEPT.
+        You can disconnect at any time.
+      </p>
+
+      <button id="acceptConnection" class="main-button">
+        ACCEPT CONNECTION
+      </button>
+
+      <p id="guestMessage" class="muted"></p>
+    </section>
+
+    <section id="guestControls" class="panel hidden">
+      <h2 class="section-title">YOUR DEVICE</h2>
+
+      <video id="localVideo" autoplay muted playsinline></video>
+
+      <button id="shareLocation">
+        SHARE MY LOCATION
+      </button>
+
+      <button id="stopConnection">
+        DISCONNECT
+      </button>
+    </section>
+
+  </section>
+
+  <section class="panel terminal-panel">
+    <div class="panel-header">
+      ROOT TERMINAL <span>● LIVE</span>
+    </div>
+    <div id="terminal" class="terminal"></div>
   </section>
 
   <footer>
-    HACKER TERMINAL // AUTHORIZED SECURITY TESTING ONLY
+    HACKER TERMINAL // AUTHORIZED DEVICE CONNECTION ONLY
   </footer>
 
 </main>
 
-<script src="app.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/app.js"></script>
 </body>
 </html>
