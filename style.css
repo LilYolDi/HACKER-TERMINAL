@@ -1,0 +1,339 @@
+
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --green: #00ff66;
+  --dark-green: #00a844;
+  --bg: #020603;
+  --panel: #07100a;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--green);
+  font-family: Consolas, "Courier New", monospace;
+  overflow-x: hidden;
+}
+
+.scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  opacity: .09;
+  background: repeating-linear-gradient(
+    transparent 0px,
+    transparent 3px,
+    #00ff66 4px
+  );
+}
+
+.topbar {
+  height: 65px;
+  padding: 0 5%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #124b25;
+  background: #030904;
+}
+
+.brand {
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.logo {
+  color: white;
+  background: #00a844;
+  padding: 7px;
+  margin-right: 8px;
+}
+
+.status {
+  font-size: 12px;
+}
+
+.online-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--green);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--green);
+  background: #06140a;
+  border: 1px solid #00a844;
+  padding: 13px;
+  transition: .2s;
+}
+
+button:hover {
+  background: var(--green);
+  color: black;
+  box-shadow: 0 0 18px #00ff6680;
+}
+
+.small-btn {
+  padding: 9px 12px;
+  font-size: 11px;
+}
+
+.dashboard {
+  width: min(1100px, 92%);
+  margin: auto;
+}
+
+.hero {
+  text-align: center;
+  padding: 48px 10px 25px;
+}
+
+.subtitle {
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: #65a77a;
+}
+
+.hero h1 {
+  font-size: clamp(30px, 7vw, 65px);
+  margin: 15px 0;
+  text-shadow: 0 0 20px #00ff6670;
+  letter-spacing: 4px;
+}
+
+.hero h1 span {
+  animation: blink 1s infinite;
+}
+
+.hero p {
+  color: #8ca993;
+  font-size: 12px;
+  letter-spacing: 4px;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.stat, .terminal-panel, .progress-panel {
+  background: var(--panel);
+  border: 1px solid #124b25;
+  padding: 17px;
+}
+
+.stat small {
+  display: block;
+  color: #759780;
+  font-size: 10px;
+  margin-bottom: 10px;
+}
+
+.stat strong {
+  font-size: 14px;
+}
+
+.green {
+  color: var(--green);
+}
+
+.terminal-panel {
+  padding: 0;
+  box-shadow: 0 0 25px #00ff660c;
+}
+
+.panel-header {
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  background: #0b190e;
+  border-bottom: 1px solid #124b25;
+  font-size: 12px;
+}
+
+.terminal {
+  height: 310px;
+  overflow-y: auto;
+  padding: 17px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: #a9d9b6;
+}
+
+.line {
+  overflow-wrap: anywhere;
+}
+
+.line.green {
+  color: var(--green);
+}
+
+.line.error {
+  color: #ff5555;
+}
+
+.line.warning {
+  color: #ffe66b;
+}
+
+.command-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid #124b25;
+  background: #030904;
+}
+
+.command-form span {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.command-form input {
+  flex: 1;
+  min-width: 0;
+  color: var(--green);
+  background: transparent;
+  border: none;
+  outline: none;
+  font: inherit;
+  font-size: 13px;
+}
+
+.command-form button {
+  padding: 9px 12px;
+  font-size: 11px;
+}
+
+.controls {
+  margin-top: 28px;
+}
+
+.section-title {
+  font-size: 13px;
+  letter-spacing: 3px;
+  margin-bottom: 14px;
+}
+
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.progress-panel {
+  margin-top: 22px;
+}
+
+.progress-heading {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 13px;
+}
+
+.progress-track {
+  height: 9px;
+  background: #142419;
+  overflow: hidden;
+}
+
+#progressBar {
+  height: 100%;
+  width: 0%;
+  background: var(--green);
+  box-shadow: 0 0 15px var(--green);
+  transition: width .2s;
+}
+
+footer {
+  padding: 30px 0;
+  text-align: center;
+  color: #52745b;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+
+footer span {
+  display: block;
+  margin-top: 9px;
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    padding: 0 3%;
+  }
+
+  .brand {
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  .status {
+    font-size: 9px;
+  }
+
+  .small-btn {
+    font-size: 9px;
+    padding: 7px;
+  }
+
+  .stats {
+    gap: 6px;
+  }
+
+  .stat {
+    padding: 11px 7px;
+  }
+
+  .stat small {
+    font-size: 8px;
+  }
+
+  .stat strong {
+    font-size: 10px;
+  }
+
+  .button-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .button-grid button {
+    font-size: 10px;
+  }
+
+  .command-form {
+    gap: 6px;
+  }
+
+  .command-form span {
+    font-size: 9px;
+  }
+
+  .command-form button {
+    font-size: 9px;
+  }
+
+  .terminal {
+    height: 280px;
+    font-size: 11px;
+  }
+}
