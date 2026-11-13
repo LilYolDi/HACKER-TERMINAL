@@ -1,252 +1,139 @@
 
-const terminal = document.getElementById("terminal");
-const input = document.getElementById("commandInput");
-const form = document.getElementById("commandForm");
-const progressBar = document.getElementById("progressBar");
-const progressValue = document.getElementById("progressValue");
-const operationName = document.getElementById("operationName");
-
+const $ = id => document.getElementById(id);
+const terminal = $("terminal");
+const results = $("results");
+let target = "";
 let busy = false;
-let matrixMode = false;
-let started = Date.now();
-let audioEnabled = false;
+const start = Date.now();
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-function log(message, type = "") {
+function log(message, type="") {
   const line = document.createElement("div");
-  line.className = "line " + type;
+  line.className = type;
   line.textContent = "> " + message;
   terminal.appendChild(line);
   terminal.scrollTop = terminal.scrollHeight;
 }
 
-function beep(frequency = 600) {
-  if (!audioEnabled) return;
-
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    oscillator.frequency.value = frequency;
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-
-    gain.gain.setValueAtTime(0.04, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(
-      0.001, ctx.currentTime + 0.08
-    );
-
-    oscillator.start();
-    oscillator.stop(ctx.currentTime + 0.08);
-    oscillator.onended = () => ctx.close();
-  } catch {}
+function print(data) {
+  results.textContent = JSON.stringify(data,null,2);
 }
 
-async function progress(name, duration = 4000) {
-  busy = true;
-  operationName.textContent = name;
-  progressBar.style.width = "0%";
-  progressValue.textContent = "0%";
+async function api(endpoint) {
+  if (!target) throw new Error("Set an authorized target domain first.");
 
-  const steps = 40;
-
-  for (let i = 1; i <= steps; i++) {
-    await sleep(duration / steps);
-    const percent = Math.round(i / steps * 100);
-
-    progressBar.style.width = percent + "%";
-    progressValue.textContent = percent + "%";
-
-    if (i % 5 === 0) beep(400 + i * 10);
-  }
-
-  log(name + " COMPLETED", "green");
-  busy = false;
-}
-
-async function hack() {
-  log("Starting simulated access sequence...");
-  log("Loading virtual environment...");
-  await progress("ACCESS SIMULATION", 4000);
-  log("Virtual access granted.", "green");
-  log("No external system was accessed.", "warning");
-}
-
-async function scan() {
-  log("Scanning simulated network...");
-  await sleep(500);
-
-  const addresses = [
-    "192.0.2.10",
-    "192.0.2.25",
-    "198.51.100.12",
-    "198.51.100.44",
-    "203.0.113.20"
-  ];
-
-  await progress("NETWORK SCAN", 3500);
-
-  addresses.forEach((ip, index) => {
-    log("HOST " + ip + " | STATUS: " +
-      (index % 2 === 0 ? "ONLINE" : "FILTERED"), "green");
+  const response = await fetch("/api/"+endpoint,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({host:target})
   });
 
-  log("5 simulated hosts discovered.");
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Request failed");
+  return data;
 }
 
-async function trace() {
-  log("Starting simulated IP trace...");
-  await progress("IP TRACE SIMULATION", 3000);
-
-  log("ROUTE 01: LOCAL GATEWAY");
-  log("ROUTE 02: VIRTUAL NODE");
-  log("ROUTE 03: TEST SERVER");
-  log("DESTINATION: 203.0.113.10", "green");
-  log("All addresses are demonstration examples.", "warning");
-}
-
-async function decrypt() {
-  log("Loading virtual encrypted file...");
-  await progress("DECRYPTION SIMULATION", 4500);
-
-  log("Encryption: AES-256 (simulated)");
-  log("Virtual key generated.", "green");
-  log("DECRYPTION SUCCESSFUL.", "green");
-  log("Demo file: SYSTEM_DATA.txt");
-}
-
-async function firewall() {
-  log("Starting virtual firewall test...");
-  await progress("FIREWALL TEST", 3000);
-
-  log("TEST 01: INPUT FILTER — PASS", "green");
-  log("TEST 02: ACCESS RULES — PASS", "green");
-  log("TEST 03: CONNECTION FILTER — PASS", "green");
-  log("SIMULATION COMPLETE.");
-}
-
-async function matrix() {
-  matrixMode = !matrixMode;
-
-  if (matrixMode) {
-    document.body.style.setProperty("--green", "#00ff66");
-    document.querySelector(".hero h1").textContent = "MATRIX MODE";
-    log("MATRIX VISUAL MODE ENABLED.", "green");
-  } else {
-    document.querySelector(".hero h1").textContent = "HACKER_TERMINAL";
-    log("MATRIX VISUAL MODE DISABLED.");
-  }
-}
-
-async function execute(command) {
-  command = command.trim().toLowerCase();
-
+async function run(command) {
+  command=command.toLowerCase().trim();
   if (!command) return;
 
-  log("root@terminal:~$ " + command);
+  log("root@hacker:~$ "+command);
 
   if (busy) {
-    log("Wait for the current operation to finish.", "warning");
+    log("Wait for the current check.", "warning");
     return;
   }
 
-  switch (command) {
-    case "help":
-      log("AVAILABLE COMMANDS:");
-      log("help - show commands");
-      log("hack - start access simulation");
-      log("scan - scan virtual network");
-      log("trace - simulate IP tracing");
-      log("decrypt - simulate decryption");
-      log("firewall - virtual firewall test");
-      log("matrix - toggle Matrix mode");
-      log("clear - clear terminal");
-      log("sound - enable/disable sound");
-      log("status - system status");
-      break;
+  if (command==="help") {
+    log("dns     - real DNS analysis");
+    log("ssl     - SSL certificate check");
+    log("headers - HTTP security headers");
+    log("ports   - check selected TCP ports");
+    log("status  - server status");
+    log("clear   - clear terminal");
+    return;
+  }
 
-    case "hack":
-      await hack();
-      break;
+  if (command==="clear") {
+    terminal.textContent="";
+    results.textContent="Waiting for command...";
+    return;
+  }
 
-    case "scan":
-      await scan();
-      break;
+  if (command==="status") {
+    log("Checking server...");
+    try {
+      const r=await fetch("/api/status");
+      const d=await r.json();
+      print(d);
+      log("Server: "+d.status,"success");
+    } catch(e) { log(e.message,"error"); }
+    return;
+  }
 
-    case "trace":
-      await trace();
-      break;
+  if (!["dns","ssl","headers","ports"].includes(command)) {
+    log("Unknown command. Type help.","error");
+    return;
+  }
 
-    case "decrypt":
-      await decrypt();
-      break;
+  busy=true;
+  log("Running real "+command.toUpperCase()+" check...");
 
-    case "firewall":
-      await firewall();
-      break;
-
-    case "matrix":
-      await matrix();
-      break;
-
-    case "clear":
-      terminal.innerHTML = "";
-      log("TERMINAL CLEARED.", "green");
-      break;
-
-    case "sound":
-      audioEnabled = !audioEnabled;
-      log("SOUND " + (audioEnabled ? "ENABLED" : "DISABLED"), "green");
-      beep();
-      break;
-
-    case "status":
-      log("SYSTEM: ONLINE");
-      log("MODE: SIMULATION");
-      log("NETWORK: LOCAL DEMO");
-      break;
-
-    default:
-      log("UNKNOWN COMMAND. TYPE HELP.", "error");
+  try {
+    const data=await api(command);
+    print(data);
+    log(command.toUpperCase()+" completed successfully.","success");
+  } catch(e) {
+    print({error:e.message});
+    log(e.message,"error");
+  } finally {
+    busy=false;
   }
 }
 
-form.addEventListener("submit", async event => {
-  event.preventDefault();
-
-  const command = input.value;
-  input.value = "";
-
-  await execute(command);
-});
-
-document.querySelectorAll("[data-command]").forEach(button => {
-  button.addEventListener("click", () => {
-    execute(button.dataset.command);
-  });
-});
-
-document.getElementById("fullscreenBtn").addEventListener("click", () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen?.();
-  } else {
-    document.exitFullscreen?.();
+$("setTarget").addEventListener("click",()=>{
+  const value=$("host").value.trim().toLowerCase();
+  if (!/^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(\.([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*$/.test(value)) {
+    log("Enter a valid domain name.","error");
+    return;
   }
+  target=value;
+  log("Target selected: "+target,"success");
+  log("Server authorization is still required.");
 });
 
-setInterval(() => {
-  const seconds = Math.floor((Date.now() - started) / 1000);
-  const hours = String(Math.floor(seconds / 3600)).padStart(2, "0");
-  const minutes = String(Math.floor(seconds % 3600 / 60)).padStart(2, "0");
-  const secs = String(seconds % 60).padStart(2, "0");
+$("commandForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const value=$("command").value;
+  $("command").value="";
+  run(value);
+});
 
-  document.getElementById("uptime").textContent =
-    `${hours}:${minutes}:${secs}`;
-}, 1000);
+document.querySelectorAll("[data-cmd]").forEach(button=>{
+  button.addEventListener("click",()=>run(button.dataset.cmd));
+});
 
-setTimeout(() => {
-  log("Virtual security protocols loaded.", "green");
-  log("Awaiting operator command...");
-}, 1000);
+async function checkStatus(){
+  try {
+    const r=await fetch("/api/status");
+    const d=await r.json();
+    $("serverStatus").textContent=d.status.toUpperCase();
+    $("status").innerHTML='<span class="dot"></span> SYSTEM ONLINE';
+  } catch {
+    $("serverStatus").textContent="OFFLINE";
+    $("status").textContent="SERVER OFFLINE";
+  }
+}
+
+setInterval(()=>{
+  const s=Math.floor((Date.now()-start)/1000);
+  $("uptime").textContent=[
+    Math.floor(s/3600),
+    Math.floor(s%3600/60),
+    s%60
+  ].map(n=>String(n).padStart(2,"0")).join(":");
+},1000);
+
+checkStatus();
+log("HACKER TERMINAL v2.0");
+log("Real diagnostic modules initialized.","success");
+log("Type HELP to see available commands.");
