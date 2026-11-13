@@ -1,7 +1,10 @@
+
 const express = require("express");
 const http = require("http");
 const path = require("path");
 const crypto = require("crypto");
+const dns = require("dns").promises;
+const net = require("net");
 const { Server } = require("socket.io");
 
 const app = express();
@@ -21,12 +24,8 @@ function cleanupRooms() {
 
   for (const [id, room] of rooms) {
     if (now - room.createdAt > ROOM_TTL) {
-      if (room.hostSocket) {
-        io.to(room.hostSocket).emit("room-expired");
-      }
-      if (room.guestSocket) {
-        io.to(room.guestSocket).emit("room-expired");
-      }
+      if (room.hostSocket) io.to(room.hostSocket).emit("room-expired");
+      if (room.guestSocket) io.to(room.guestSocket).emit("room-expired");
       rooms.delete(id);
     }
   }
@@ -43,9 +42,70 @@ function safeEqual(a, b) {
 app.get("/api/status", (req, res) => {
   res.json({
     status: "online",
-    version: "2.2.0",
-    mode: "web-remote-connect"
+    version: "2.3.0",
+    mode: "multi-mode-system"
   });
+});
+
+// DNS / IP LOOKUP
+app.post("/api/lookup", async (req, res) => {
+  try {
+    let target = String(req.body.target || "").trim();
+
+    if (!target || target.length > 253) {
+      return res.status(400).json({
+        error: "Enter a valid domain or IP address."
+      });
+    }
+
+    if (target.includes("://") || /[/\\\s@]/.test(target)) {
+      return res.status(400).json({
+        error: "Enter only a domain or IP address."
+      });
+    }
+
+    if (net.isIP(target)) {
+      return res.json({
+        success: true,
+        target,
+        addresses: [target],
+        type: "IP ADDRESS"
+      });
+    }
+
+    target = target.replace(/\.$/, "").toLowerCase();
+
+    if (
+      !/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))+$/.test(target)
+    ) {
+      return res.status(400).json({
+        error: "Invalid domain name."
+      });
+    }
+
+    const records = await dns.lookup(target, {
+      all: true,
+      verbatim: true
+    });
+
+    const addresses = [...new Set(records.map(item => item.address))];
+
+    if (!addresses.length) {
+      throw new Error("No IP addresses found.");
+    }
+
+    res.json({
+      success: true,
+      target,
+      addresses,
+      type: "DNS LOOKUP"
+    });
+
+  } catch (error) {
+    res.status(404).json({
+      error: "Could not resolve domain. Check the address and try again."
+    });
+  }
 });
 
 // Create a private connection room.
@@ -84,9 +144,7 @@ io.use((socket, next) => {
   const { roomId, role, token } = socket.handshake.auth || {};
   const room = rooms.get(roomId);
 
-  if (!room) {
-    return next(new Error("Room not found or expired"));
-  }
+  if (!room) return next(new Error("Room not found or expired"));
 
   if (role !== "host" && role !== "guest") {
     return next(new Error("Invalid connection role"));
@@ -139,12 +197,10 @@ io.on("connection", socket => {
     }
   }
 
-  // Relay WebRTC offer, answer and ICE candidates.
   socket.on("signal", data => {
     const currentRoom = rooms.get(socket.roomId);
 
     if (!currentRoom || !data || typeof data !== "object") return;
-
     if (!["offer", "answer", "ice"].includes(data.type)) return;
 
     const destination = socket.role === "host"
@@ -156,7 +212,6 @@ io.on("connection", socket => {
     }
   });
 
-  // Relay voluntarily shared location.
   socket.on("device-location", data => {
     if (socket.role !== "guest") return;
 
@@ -198,7 +253,6 @@ io.on("connection", socket => {
   });
 });
 
-// Serve the main application and phone connection page.
 app.get("/connect/:roomId", (req, res) => {
   if (!/^[a-f0-9]{32}$/.test(req.params.roomId)) {
     return res.status(404).send("Invalid connection link");
@@ -212,5 +266,5 @@ app.get("*", (req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`HACKER TERMINAL v2.2 running on port ${PORT}`);
+  console.log(`HACKER TERMINAL v2.3 running on port ${PORT}`);
 });
