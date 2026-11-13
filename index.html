@@ -1,6 +1,5 @@
-
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,16 +8,20 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <div class="brand">[ H ] HACKER TERMINAL</div>
-  <div id="status"><span class="dot"></span> CONNECTING</div>
+
+<header class="topbar">
+  <div class="brand"><span class="logo">H</span> HACKER TERMINAL</div>
+  <div class="status" id="status">
+    <span class="online-dot"></span> CONNECTING
+  </div>
 </header>
 
-<main>
+<main class="dashboard">
+
   <section class="hero">
     <p>CYBER SECURITY DIAGNOSTIC SYSTEM</p>
     <h1>HACKER_TERMINAL<span>_</span></h1>
-    <small>REAL SECURITY ANALYSIS</small>
+    <small class="subtitle">REAL SECURITY ANALYSIS</small>
   </section>
 
   <section class="target">
@@ -31,24 +34,39 @@
   </section>
 
   <section class="stats">
-    <div><small>SERVER</small><strong id="serverStatus">CHECKING</strong></div>
-    <div><small>MODE</small><strong>REAL</strong></div>
-    <div><small>UPTIME</small><strong id="uptime">00:00:00</strong></div>
+    <div class="stat">
+      <small>SERVER</small>
+      <strong id="serverStatus">CHECKING</strong>
+    </div>
+    <div class="stat">
+      <small>MODE</small>
+      <strong>REAL</strong>
+    </div>
+    <div class="stat">
+      <small>UPTIME</small>
+      <strong id="uptime">00:00:00</strong>
+    </div>
   </section>
 
   <section class="terminal-panel">
-    <div class="panel-head">ROOT TERMINAL <span>● LIVE</span></div>
-    <div id="terminal"></div>
-    <form id="commandForm">
-      <b>root@hacker:~$</b>
+    <div class="panel-header">
+      ROOT TERMINAL
+      <span>● LIVE</span>
+    </div>
+
+    <div class="terminal" id="terminal"></div>
+
+    <form class="command-form" id="commandForm">
+      <span>root@hacker:~$</span>
       <input id="command" placeholder="Type help..." autocomplete="off">
-      <button>RUN</button>
+      <button type="submit">RUN</button>
     </form>
   </section>
 
-  <section class="operations">
-    <h2>SECURITY OPERATIONS</h2>
-    <div class="grid">
+  <section class="controls">
+    <h2 class="section-title">SECURITY OPERATIONS</h2>
+
+    <div class="button-grid">
       <button data-cmd="dns">DNS ANALYSIS</button>
       <button data-cmd="ssl">SSL CHECK</button>
       <button data-cmd="headers">HTTP HEADERS</button>
@@ -58,13 +76,51 @@
     </div>
   </section>
 
+  <section class="progress-panel">
+    <h2 class="section-title">LINK TRACKER</h2>
+    <p class="tracker-description">
+      Generate a unique link. The visitor must explicitly agree
+      before their public IP address is recorded.
+    </p>
+
+    <button id="generateLink" class="generate-button">
+      GENERATE LINK
+    </button>
+
+    <div id="linkArea" class="link-area hidden">
+      <label>YOUR TRACKING LINK</label>
+      <div class="link-row">
+        <input id="trackingLink" readonly>
+        <button id="copyLink">COPY</button>
+      </div>
+      <p id="linkExpiry"></p>
+      <p class="private-note">
+        Keep the owner access token private. It grants access to visit records.
+      </p>
+    </div>
+
+    <div class="visitors">
+      <div class="visitor-heading">
+        <strong>VISITOR LOG</strong>
+        <span id="visitorCount">0 VISITS</span>
+      </div>
+      <div id="visitorLog">
+        <p class="empty-log">No visitors yet.</p>
+      </div>
+    </div>
+  </section>
+
   <section class="results">
-    <h2>ANALYSIS RESULTS</h2>
+    <h2 class="section-title">ANALYSIS RESULTS</h2>
     <pre id="results">Waiting for command...</pre>
   </section>
 
-  <footer>HACKER TERMINAL // AUTHORIZED SECURITY TESTING ONLY</footer>
+  <footer>
+    HACKER TERMINAL // AUTHORIZED SECURITY TESTING ONLY
+  </footer>
+
 </main>
+
 <script src="app.js"></script>
 </body>
 </html>
