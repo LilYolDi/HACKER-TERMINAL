@@ -404,12 +404,12 @@ function connectSocket(role, token = "") {
   return new Promise((resolve, reject) => {
     socket = io({
       auth: {
-        roomId,
+        roomId: isGuest ? roomId : roomCode,
         role,
         token
       }
     });
-
+    
     socket.once("connect", () => resolve());
 
     socket.once("connect_error", error => {
