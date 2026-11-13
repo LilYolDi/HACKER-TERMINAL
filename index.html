@@ -2,100 +2,69 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#020603">
-  <title>HACKER TERMINAL</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#020603">
+<title>HACKER TERMINAL</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<div class="scanlines"></div>
-
-<header class="topbar">
-  <div class="brand">
-    <span class="logo">[ H ]</span>
-    HACKER TERMINAL
-  </div>
-  <div class="status">
-    <span class="online-dot"></span> SYSTEM ONLINE
-  </div>
-  <button id="fullscreenBtn" class="small-btn">FULLSCREEN</button>
+<header>
+  <div class="brand">[ H ] HACKER TERMINAL</div>
+  <div id="status"><span class="dot"></span> CONNECTING</div>
 </header>
 
-<main class="dashboard">
-
+<main>
   <section class="hero">
-    <div class="subtitle">ADVANCED CYBER SIMULATION SYSTEM</div>
-    <h1>HACKER<span>_</span>TERMINAL</h1>
-    <p>WELCOME TO THE SYSTEM</p>
+    <p>CYBER SECURITY DIAGNOSTIC SYSTEM</p>
+    <h1>HACKER_TERMINAL<span>_</span></h1>
+    <small>REAL SECURITY ANALYSIS</small>
+  </section>
+
+  <section class="target">
+    <label for="host">AUTHORIZED TARGET DOMAIN</label>
+    <div class="target-input">
+      <input id="host" placeholder="your-domain.com">
+      <button id="setTarget">SET TARGET</button>
+    </div>
+    <p>Only domains you own or have permission to test.</p>
   </section>
 
   <section class="stats">
-    <div class="stat">
-      <small>SYSTEM STATUS</small>
-      <strong class="green">ACTIVE</strong>
-    </div>
-    <div class="stat">
-      <small>CONNECTION</small>
-      <strong id="connection">SECURE</strong>
-    </div>
-    <div class="stat">
-      <small>UPTIME</small>
-      <strong id="uptime">00:00:00</strong>
-    </div>
+    <div><small>SERVER</small><strong id="serverStatus">CHECKING</strong></div>
+    <div><small>MODE</small><strong>REAL</strong></div>
+    <div><small>UPTIME</small><strong id="uptime">00:00:00</strong></div>
   </section>
 
   <section class="terminal-panel">
-    <div class="panel-header">
-      <span>ROOT TERMINAL</span>
-      <span class="green">● LIVE</span>
-    </div>
-
-    <div id="terminal" class="terminal">
-      <div class="line">HACKER TERMINAL v1.0</div>
-      <div class="line">Initializing simulation environment...</div>
-      <div class="line green">SYSTEM READY.</div>
-      <div class="line">Type HELP to see available commands.</div>
-    </div>
-
-    <form id="commandForm" class="command-form">
-      <span>root@terminal:~$</span>
-      <input id="commandInput" autocomplete="off"
-        spellcheck="false" placeholder="Enter command...">
-      <button type="submit">EXECUTE</button>
+    <div class="panel-head">ROOT TERMINAL <span>● LIVE</span></div>
+    <div id="terminal"></div>
+    <form id="commandForm">
+      <b>root@hacker:~$</b>
+      <input id="command" placeholder="Type help..." autocomplete="off">
+      <button>RUN</button>
     </form>
   </section>
 
-  <section class="controls">
-    <div class="section-title">OPERATIONS</div>
-    <div class="button-grid">
-      <button data-command="hack">START HACK</button>
-      <button data-command="scan">SCAN NETWORK</button>
-      <button data-command="trace">TRACE IP</button>
-      <button data-command="decrypt">DECRYPT DATA</button>
-      <button data-command="firewall">FIREWALL TEST</button>
-      <button data-command="matrix">MATRIX MODE</button>
+  <section class="operations">
+    <h2>SECURITY OPERATIONS</h2>
+    <div class="grid">
+      <button data-cmd="dns">DNS ANALYSIS</button>
+      <button data-cmd="ssl">SSL CHECK</button>
+      <button data-cmd="headers">HTTP HEADERS</button>
+      <button data-cmd="ports">PORT CHECK</button>
+      <button data-cmd="status">SYSTEM STATUS</button>
+      <button data-cmd="clear">CLEAR TERMINAL</button>
     </div>
   </section>
 
-  <section class="progress-panel">
-    <div class="progress-heading">
-      <span id="operationName">SYSTEM IDLE</span>
-      <span id="progressValue">0%</span>
-    </div>
-    <div class="progress-track">
-      <div id="progressBar"></div>
-    </div>
+  <section class="results">
+    <h2>ANALYSIS RESULTS</h2>
+    <pre id="results">Waiting for command...</pre>
   </section>
 
-  <footer>
-    HACKER TERMINAL © 2026
-    <span>SIMULATION ONLY // NO REAL NETWORK ACCESS</span>
-  </footer>
-
+  <footer>HACKER TERMINAL // AUTHORIZED SECURITY TESTING ONLY</footer>
 </main>
-
 <script src="app.js"></script>
 </body>
 </html>
