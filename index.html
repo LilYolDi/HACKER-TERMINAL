@@ -22,7 +22,7 @@
   <section class="hero">
     <p>CYBER SECURITY DIAGNOSTIC SYSTEM</p>
     <h1>HACKER_TERMINAL<span>_</span></h1>
-    <small class="subtitle">MULTI MODE SYSTEM v2.4</small>
+    <small class="subtitle">MULTI MODE SYSTEM v2.5</small>
   </section>
 
   <!-- MODE SELECTOR -->
@@ -36,6 +36,10 @@
 
       <button id="phoneModeButton" class="mode-button" type="button">
         02 // ПОДКЛЮЧИТЬСЯ К ТЕЛЕФОНУ
+      </button>
+
+      <button id="locationModeButton" class="mode-button" type="button">
+        03 // LOCATION TRACKER
       </button>
     </div>
   </section>
@@ -105,7 +109,7 @@
     </div>
   </section>
 
-  <!-- VISITOR CONSENT PAGE -->
+  <!-- VISITOR IP CONSENT PAGE -->
   <section id="visitorPanel" class="hidden">
     <section class="panel">
       <h2 class="section-title">PUBLIC IP ADDRESS REQUEST</h2>
@@ -121,7 +125,7 @@
       </p>
 
       <button id="allowIpShare" class="main-button" type="button">
-        ПЕРЕЙТИ НА ЮТУБ 
+        ПЕРЕЙТИ НА ЮТУБ
       </button>
 
       <button id="declineIpShare" type="button">
@@ -132,6 +136,100 @@
         ОЖИДАНИЕ ВАШЕГО РЕШЕНИЯ...
       </div>
     </section>
+  </section>
+
+  <!-- LOCATION TRACKER HOST MODE -->
+  <section id="locationPanel" class="panel mode-panel hidden">
+
+    <h2 class="section-title">LOCATION TRACKER</h2>
+
+    <p class="description">
+      Создай уникальную ссылку для запроса местоположения.
+      Координаты будут переданы только после согласия посетителя
+      и разрешения геолокации в его браузере.
+    </p>
+
+    <button id="createLocationLink" class="main-button" type="button">
+      CREATE LOCATION LINK
+    </button>
+
+    <div id="locationLinkArea" class="hidden">
+      <label for="locationConnectionLink">YOUR UNIQUE LOCATION LINK</label>
+
+      <div class="link-row">
+        <input id="locationConnectionLink" type="text" readonly>
+        <button id="copyLocationLink" type="button">КОПИРОВАТЬ</button>
+      </div>
+
+      <p id="locationLinkMessage" class="muted">
+        Ссылка создана. Ожидание разрешения посетителя...
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2 class="section-title">LOCATION DATA</h2>
+
+      <div id="visitorLocationList" class="device-info">
+        ОЖИДАНИЕ ДАННЫХ О МЕСТОПОЛОЖЕНИИ...
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 class="section-title">GPS MAP</h2>
+
+      <div id="locationMapInfo" class="device-info">
+        КАРТА БУДЕТ ДОСТУПНА ПОСЛЕ ПОЛУЧЕНИЯ КООРДИНАТ
+      </div>
+
+      <a
+        id="locationMapLink"
+        class="main-button hidden"
+        href="#"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        ОТКРЫТЬ МЕСТОПОЛОЖЕНИЕ НА КАРТЕ
+      </a>
+    </div>
+
+  </section>
+
+  <!-- LOCATION VISITOR CONSENT PAGE -->
+  <section id="locationVisitorPanel" class="hidden">
+
+    <section class="panel">
+      <h2 class="section-title">LOCATION ACCESS REQUEST</h2>
+
+      <p class="description">
+        Владелец ссылки запрашивает разрешение на получение
+        вашего местоположения.
+      </p>
+
+      <p class="warning">
+        При согласии браузер запросит доступ к геолокации.
+        Если вы разрешите доступ, ваши GPS-координаты и доступные
+        сведения о местоположении будут переданы владельцу ссылки.
+        Вы можете отказаться.
+      </p>
+
+      <button
+        id="allowLocationShare"
+        class="main-button"
+        type="button"
+      >
+        РАЗРЕШИТЬ ПЕРЕДАЧУ МЕСТОПОЛОЖЕНИЯ
+      </button>
+
+      <button id="declineLocationShare" type="button">
+        ОТКЛОНИТЬ
+      </button>
+
+      <div id="visitorLocationResult" class="device-info">
+        ОЖИДАНИЕ ВАШЕГО РЕШЕНИЯ...
+      </div>
+
+    </section>
+
   </section>
 
   <!-- COMPUTER DASHBOARD -->
