@@ -22,7 +22,7 @@
   <section class="hero">
     <p>CYBER SECURITY DIAGNOSTIC SYSTEM</p>
     <h1>HACKER_TERMINAL<span>_</span></h1>
-    <small class="subtitle">MULTI MODE SYSTEM v2.3</small>
+    <small class="subtitle">MULTI MODE SYSTEM v2.4</small>
   </section>
 
   <!-- MODE SELECTOR -->
@@ -67,6 +67,71 @@
     <div id="ipResult" class="device-info">
       ОЖИДАНИЕ ЗАПРОСА...
     </div>
+
+    <!-- CREATE IP LINK -->
+    <div class="panel">
+      <h2 class="section-title">IP LINK GENERATOR</h2>
+
+      <p class="description">
+        Создай уникальную ссылку и отправь её посетителю.
+        Публичный IP будет передан в терминал только после его согласия.
+      </p>
+
+      <button id="createIpLink" class="main-button" type="button">
+        СОЗДАТЬ ССЫЛКУ
+      </button>
+
+      <div id="ipLinkArea" class="hidden">
+        <label for="ipConnectionLink">YOUR UNIQUE LINK</label>
+
+        <div class="link-row">
+          <input id="ipConnectionLink" type="text" readonly>
+          <button id="copyIpLink" type="button">КОПИРОВАТЬ</button>
+        </div>
+
+        <p id="ipLinkMessage" class="muted">
+          Ссылка создана. Ожидание согласия посетителя...
+        </p>
+      </div>
+    </div>
+
+    <!-- VISITOR IP LOG -->
+    <div class="panel">
+      <h2 class="section-title">VISITOR IP LOG</h2>
+
+      <div id="visitorIpList" class="device-info">
+        ОЖИДАНИЕ ПОДКЛЮЧЕНИЙ...
+      </div>
+    </div>
+  </section>
+
+  <!-- VISITOR CONSENT PAGE -->
+  <section id="visitorPanel" class="hidden">
+    <section class="panel">
+      <h2 class="section-title">PUBLIC IP ADDRESS REQUEST</h2>
+
+      <p class="description">
+        Владелец ссылки запрашивает передачу вашего публичного IP-адреса.
+      </p>
+
+      <p class="warning">
+        Если вы согласитесь, ваш публичный IP-адрес будет передан владельцу
+        ссылки и отображён в его терминале. Никакие данные не передаются
+        до вашего подтверждения.
+      </p>
+
+      <button id="allowIpShare" class="main-button" type="button">
+        РАЗРЕШИТЬ ПЕРЕДАЧУ IP
+      </button>
+
+      <button id="declineIpShare" type="button">
+        ОТКЛОНИТЬ
+      </button>
+
+      <div id="visitorIpResult" class="device-info">
+        ОЖИДАНИЕ ВАШЕГО РЕШЕНИЯ...
+      </div>
+    </section>
   </section>
 
   <!-- COMPUTER DASHBOARD -->
@@ -96,16 +161,16 @@
         Create a private session and open the generated link on your Android phone.
       </p>
 
-      <button id="createSession" class="main-button">
+      <button id="createSession" class="main-button" type="button">
         CREATE CONNECTION
       </button>
 
       <div id="sessionArea" class="hidden">
-        <label>PHONE CONNECTION LINK</label>
+        <label for="connectionLink">PHONE CONNECTION LINK</label>
 
         <div class="link-row">
           <input id="connectionLink" readonly>
-          <button id="copyLink">COPY</button>
+          <button id="copyLink" type="button">COPY</button>
         </div>
 
         <p id="sessionExpiry" class="muted"></p>
@@ -129,7 +194,9 @@
       </div>
 
       <div class="controls">
-        <button id="disconnect" disabled>DISCONNECT</button>
+        <button id="disconnect" type="button" disabled>
+          DISCONNECT
+        </button>
       </div>
 
       <div id="locationInfo" class="device-info">
@@ -156,7 +223,7 @@
         You can disconnect at any time.
       </p>
 
-      <button id="acceptConnection" class="main-button">
+      <button id="acceptConnection" class="main-button" type="button">
         ACCEPT CONNECTION
       </button>
 
@@ -168,17 +235,18 @@
 
       <video id="localVideo" autoplay muted playsinline></video>
 
-      <button id="shareLocation">
+      <button id="shareLocation" type="button">
         SHARE MY LOCATION
       </button>
 
-      <button id="stopConnection">
+      <button id="stopConnection" type="button">
         DISCONNECT
       </button>
     </section>
 
   </section>
 
+  <!-- TERMINAL -->
   <section class="panel terminal-panel">
     <div class="panel-header">
       ROOT TERMINAL <span>● LIVE</span>
