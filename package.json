@@ -1,12 +1,13 @@
 {
   "name": "hacker-terminal",
-  "version": "2.1.0",
-  "description": "Hacker Terminal with consent-based link tracker",
+  "version": "2.2.0",
+  "description": "Hacker Terminal Web Remote Connect",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
   }
 }
