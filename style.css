@@ -366,9 +366,8 @@ footer {
   }
 
   .mode-selector {
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
+    grid-template-columns: 1fr;
+  }
 
   .mode-button {
     min-height: 48px;
