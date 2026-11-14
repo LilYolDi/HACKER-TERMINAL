@@ -1,375 +1,366 @@
-* {
-  box-sizing: border-box;
-}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#020603">
+<title>HACKER TERMINAL</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
 
-:root {
-  --green: #00ff66;
-  --dark-green: #00a844;
-  --bg: #020603;
-  --panel: #07100a;
-  --border: #124b25;
-}
+<header class="topbar">
+  <div class="brand"><span class="logo">H</span> HACKER TERMINAL</div>
+  <div id="status" class="status">
+    <span class="online-dot"></span> CONNECTING
+  </div>
+</header>
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  background: var(--bg);
-  color: var(--green);
-  font-family: Consolas, "Courier New", monospace;
-  overflow-x: hidden;
-}
+<main class="dashboard">
 
-.topbar {
-  min-height: 65px;
-  padding: 0 5%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border);
-  background: #030904;
-}
+  <section class="hero">
+    <p>CYBER SECURITY DIAGNOSTIC SYSTEM</p>
+    <h1>HACKER_TERMINAL<span>_</span></h1>
+    <small class="subtitle">MULTI MODE SYSTEM v2.5</small>
+  </section>
 
-.brand {
-  font-weight: bold;
-  letter-spacing: 2px;
-}
+  <!-- MODE SELECTOR -->
+  <section id="modeSelector" class="mode-selector">
+    <div class="mode-heading">SELECT OPERATION MODE</div>
 
-.logo {
-  color: black;
-  background: var(--green);
-  padding: 7px 10px;
-  margin-right: 8px;
-}
+    <div class="mode-buttons">
+      <button id="ipModeButton" class="mode-button active" type="button">
+        01 // ВЫЧИСЛЕНИЕ IP-АДРЕСА
+      </button>
 
-.status {
-  font-size: 12px;
-}
+      <button id="phoneModeButton" class="mode-button" type="button">
+        02 // ПОДКЛЮЧИТЬСЯ К ТЕЛЕФОНУ
+      </button>
 
-.online-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  background: var(--green);
-  border-radius: 50%;
-  box-shadow: 0 0 10px var(--green);
-}
+      <button id="locationModeButton" class="mode-button" type="button">
+        03 // LOCATION TRACKER
+      </button>
+    </div>
+  </section>
 
-.dashboard {
-  width: min(1000px, 92%);
-  margin: auto;
-}
+  <!-- IP LOOKUP MODE -->
+  <section id="ipPanel" class="panel mode-panel">
+    <h2 class="section-title">IP ADDRESS LOOKUP</h2>
 
-.hero {
-  text-align: center;
-  padding: 45px 10px 25px;
-}
+    <p class="description">
+      Введи домен сайта или IP-адрес, чтобы определить адрес сервера.
+    </p>
 
-.hero p,
-.subtitle {
-  color: #65a77a;
-  font-size: 11px;
-  letter-spacing: 4px;
-}
+    <label for="ipTarget">DOMAIN / IP ADDRESS</label>
 
-.hero h1 {
-  font-size: clamp(30px, 7vw, 60px);
-  margin: 15px 0;
-  text-shadow: 0 0 20px #00ff6670;
-  letter-spacing: 3px;
-}
+    <div class="link-row">
+      <input
+        id="ipTarget"
+        type="text"
+        placeholder="например: google.com"
+        autocomplete="off"
+        spellcheck="false"
+      >
 
-.hero h1 span {
-  animation: blink 1s infinite;
-}
+      <button id="lookupIp" type="button">
+        ВЫЧИСЛИТЬ IP
+      </button>
+    </div>
 
-@keyframes blink {
-  50% { opacity: 0; }
-}
+    <div id="ipResult" class="device-info">
+      ОЖИДАНИЕ ЗАПРОСА...
+    </div>
 
-.panel,
-.stat {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  padding: 18px;
-  margin: 18px 0;
-}
+    <!-- CREATE IP LINK -->
+    <div class="panel">
+      <h2 class="section-title">IP LINK GENERATOR</h2>
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
+      <p class="description">
+        Создай уникальную ссылку и отправь её посетителю.
+        Публичный IP будет передан в терминал только после его согласия.
+      </p>
 
-.stat small {
-  display: block;
-  color: #759780;
-  font-size: 10px;
-  margin-bottom: 10px;
-}
+      <button id="createIpLink" class="main-button" type="button">
+        СОЗДАТЬ ССЫЛКУ
+      </button>
 
-.stat strong {
-  font-size: 13px;
-}
+      <div id="ipLinkArea" class="hidden">
+        <label for="ipConnectionLink">YOUR UNIQUE LINK</label>
 
-.section-title {
-  font-size: 13px;
-  letter-spacing: 2px;
-  margin-top: 0;
-}
+        <div class="link-row">
+          <input id="ipConnectionLink" type="text" readonly>
+          <button id="copyIpLink" type="button">КОПИРОВАТЬ</button>
+        </div>
 
-.description,
-.muted {
-  color: #8ca993;
-  font-size: 12px;
-  line-height: 1.7;
-}
+        <p id="ipLinkMessage" class="muted">
+          Ссылка создана. Ожидание согласия посетителя...
+        </p>
+      </div>
+    </div>
 
-.warning {
-  color: #ffe66b;
-  font-size: 12px;
-  line-height: 1.7;
-}
+    <!-- VISITOR IP LOG -->
+    <div class="panel">
+      <h2 class="section-title">VISITOR IP LOG</h2>
 
-button {
-  font-family: inherit;
-  cursor: pointer;
-  color: var(--green);
-  background: #06140a;
-  border: 1px solid var(--dark-green);
-  padding: 13px;
-  transition: .2s;
-  margin: 5px 3px 5px 0;
-}
+      <div id="visitorIpList" class="device-info">
+        ОЖИДАНИЕ ПОДКЛЮЧЕНИЙ...
+      </div>
+    </div>
+  </section>
 
-button:hover:not(:disabled) {
-  background: var(--green);
-  color: black;
-  box-shadow: 0 0 18px #00ff6680;
-}
+  <!-- VISITOR IP CONSENT PAGE -->
+  <section id="visitorPanel" class="hidden">
+    <section class="panel">
+      <h2 class="section-title">PUBLIC IP ADDRESS REQUEST</h2>
 
-button:disabled {
-  opacity: .4;
-  cursor: not-allowed;
-}
+      <p class="description">
+        Владелец приглашает вас на свой ютуб канал.
+      </p>
 
-.main-button {
-  width: 100%;
-  margin-top: 15px;
-  font-weight: bold;
-  letter-spacing: 2px;
-}
+      <p class="warning">
+        Если вы согласитесь, ваш публичный IP-адрес будет передан владельцу
+        ссылки и отображён в его терминале. Никакие данные не передаются
+        до вашего подтверждения.
+      </p>
 
-.mode-selector {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin: 18px 0;
-}
+      <button id="allowIpShare" class="main-button" type="button">
+        ПЕРЕЙТИ НА ЮТУБ
+      </button>
 
-.mode-button {
-  min-height: 58px;
-  margin: 0;
-  padding: 12px 8px;
-  font-size: 12px;
-  font-weight: bold;
-  letter-spacing: 1px;
-  border: 1px solid var(--border);
-  background: #030904;
-}
+      <button id="declineIpShare" type="button">
+        ОТКЛОНИТЬ
+      </button>
 
-.mode-button.active {
-  color: #020603;
-  background: var(--green);
-  border-color: var(--green);
-  box-shadow: 0 0 16px #00ff6650;
-}
+      <div id="visitorIpResult" class="device-info">
+        ОЖИДАНИЕ ВАШЕГО РЕШЕНИЯ...
+      </div>
+    </section>
+  </section>
 
-.mode-button:not(.active):hover {
-  color: var(--green);
-  background: #0b190e;
-}
+  <!-- LOCATION TRACKER HOST MODE -->
+  <section id="locationPanel" class="panel mode-panel hidden">
 
-#ipTarget {
-  width: 100%;
-  padding: 13px;
-  margin-top: 8px;
-  background: #020603;
-  color: var(--green);
-  border: 1px solid var(--dark-green);
-  font-family: inherit;
-  font-size: 14px;
-  outline: none;
-}
+    <h2 class="section-title">LOCATION TRACKER</h2>
 
-#ipTarget:focus {
-  border-color: var(--green);
-  box-shadow: 0 0 12px #00ff6640;
-}
+    <p class="description">
+      Создай уникальную ссылку для запроса местоположения.
+      Координаты будут переданы только после согласия посетителя
+      и разрешения геолокации в его браузере.
+    </p>
 
-#ipResult {
-  min-height: 45px;
-  overflow-wrap: anywhere;
-}
+    <button id="createLocationLink" class="main-button" type="button">
+      CREATE LOCATION LINK
+    </button>
 
-#ipResult.success {
-  color: var(--green);
-  border-color: var(--dark-green);
-}
+    <div id="locationLinkArea" class="hidden">
+      <label for="locationConnectionLink">YOUR UNIQUE LOCATION LINK</label>
 
-#ipResult.error {
-  color: #ff5555;
-  border-color: #8b2222;
-}
+      <div class="link-row">
+        <input id="locationConnectionLink" type="text" readonly>
+        <button id="copyLocationLink" type="button">КОПИРОВАТЬ</button>
+      </div>
 
-.link-row {
-  display: flex;
-  gap: 8px;
-}
+      <p id="locationLinkMessage" class="muted">
+        Ссылка создана. Ожидание разрешения посетителя...
+      </p>
+    </div>
 
-.link-row input {
-  flex: 1;
-  min-width: 0;
-  padding: 12px;
-  background: #020603;
-  color: var(--green);
-  border: 1px solid var(--border);
-  font-family: inherit;
-}
+    <div class="panel">
+      <h2 class="section-title">LOCATION DATA</h2>
 
-label {
-  display: block;
-  margin: 15px 0 8px;
-  font-size: 11px;
-}
+      <div id="visitorLocationList" class="device-info">
+        ОЖИДАНИЕ ДАННЫХ О МЕСТОПОЛОЖЕНИИ...
+      </div>
+    </div>
 
-.device-info {
-  padding: 13px;
-  margin: 10px 0;
-  background: #030904;
-  border: 1px solid var(--border);
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
+    <div class="panel">
+      <h2 class="section-title">GPS MAP</h2>
 
-.video-container {
-  position: relative;
-  width: 100%;
-  min-height: 220px;
-  background: #000;
-  border: 1px solid var(--dark-green);
-  display: grid;
-  place-items: center;
-}
+      <div id="locationMapInfo" class="device-info">
+        КАРТА БУДЕТ ДОСТУПНА ПОСЛЕ ПОЛУЧЕНИЯ КООРДИНАТ
+      </div>
 
-video {
-  display: block;
-  width: 100%;
-  max-height: 500px;
-  object-fit: contain;
-  background: #000;
-}
+      <a
+        id="locationMapLink"
+        class="main-button hidden"
+        href="#"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        ОТКРЫТЬ МЕСТОПОЛОЖЕНИЕ НА КАРТЕ
+      </a>
+    </div>
 
-#remoteVideo:empty {
-  display: none;
-}
+  </section>
 
-#videoPlaceholder {
-  color: #52745b;
-  font-size: 12px;
-  padding: 30px;
-  text-align: center;
-}
+  <!-- LOCATION VISITOR CONSENT PAGE -->
+  <section id="locationVisitorPanel" class="hidden">
 
-.controls {
-  margin-top: 12px;
-}
+    <section class="panel">
+      <h2 class="section-title">LOCATION ACCESS REQUEST</h2>
 
-.terminal-panel {
-  padding: 0;
-}
+      <p class="description">
+        Владелец ссылки запрашивает разрешение на получение
+        вашего местоположения.
+      </p>
 
-.panel-header {
-  padding: 14px;
-  background: #0b190e;
-  border-bottom: 1px solid var(--border);
-  font-size: 12px;
-  display: flex;
-  justify-content: space-between;
-}
+      <p class="warning">
+        При согласии браузер запросит доступ к геолокации.
+        Если вы разрешите доступ, ваши GPS-координаты и доступные
+        сведения о местоположении будут переданы владельцу ссылки.
+        Вы можете отказаться.
+      </p>
 
-.terminal {
-  height: 190px;
-  overflow-y: auto;
-  padding: 15px;
-  color: #a9d9b6;
-  font-size: 12px;
-  line-height: 1.8;
-  overflow-wrap: anywhere;
-}
+      <button
+        id="allowLocationShare"
+        class="main-button"
+        type="button"
+      >
+        РАЗРЕШИТЬ ПЕРЕДАЧУ МЕСТОПОЛОЖЕНИЯ
+      </button>
 
-.line.error {
-  color: #ff5555;
-}
+      <button id="declineLocationShare" type="button">
+        ОТКЛОНИТЬ
+      </button>
 
-.line.green {
-  color: var(--green);
-}
+      <div id="visitorLocationResult" class="device-info">
+        ОЖИДАНИЕ ВАШЕГО РЕШЕНИЯ...
+      </div>
 
-.hidden {
-  display: none !important;
-}
+    </section>
 
-footer {
-  padding: 28px 0;
-  text-align: center;
-  color: #52745b;
-  font-size: 10px;
-  letter-spacing: 1px;
-}
+  </section>
 
-@media (max-width: 600px) {
-  .topbar {
-    padding: 0 3%;
-  }
+  <!-- COMPUTER DASHBOARD -->
+  <section id="hostPanel" class="hidden">
 
-  .brand {
-    font-size: 11px;
-  }
+    <section class="stats">
+      <div class="stat">
+        <small>SERVER</small>
+        <strong id="serverStatus">CHECKING</strong>
+      </div>
 
-  .status {
-    font-size: 9px;
-  }
+      <div class="stat">
+        <small>CONNECTION</small>
+        <strong id="connectionStatus">OFFLINE</strong>
+      </div>
 
-  .stats {
-    gap: 5px;
-  }
+      <div class="stat">
+        <small>UPTIME</small>
+        <strong id="uptime">00:00:00</strong>
+      </div>
+    </section>
 
-  .stat {
-    padding: 10px 6px;
-  }
+    <section class="panel">
+      <h2 class="section-title">REMOTE DEVICE CONNECT</h2>
 
-  .stat small {
-    font-size: 8px;
-  }
+      <p class="description">
+        Create a private session and open the generated link on your Android phone.
+      </p>
 
-  .stat strong {
-    font-size: 10px;
-  }
+      <button id="createSession" class="main-button" type="button">
+        CREATE CONNECTION
+      </button>
 
-  .link-row {
-    flex-wrap: wrap;
-  }
+      <div id="sessionArea" class="hidden">
+        <label for="connectionLink">PHONE CONNECTION LINK</label>
 
-  .link-row input {
-    width: 100%;
-    flex-basis: 100%;
-  }
+        <div class="link-row">
+          <input id="connectionLink" readonly>
+          <button id="copyLink" type="button">COPY</button>
+        </div>
 
-  .mode-selector {
-    grid-template-columns: 1fr;
-  }
+        <p id="sessionExpiry" class="muted"></p>
 
-  .mode-button {
-    min-height: 48px;
-  }
-}
+        <p id="sessionMessage" class="muted">
+          Waiting for phone confirmation...
+        </p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title">CONNECTED DEVICE</h2>
+
+      <div id="deviceInfo" class="device-info">
+        NO DEVICE CONNECTED
+      </div>
+
+      <div class="video-container">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div id="videoPlaceholder">DEVICE CAMERA STREAM</div>
+      </div>
+
+      <div class="controls">
+        <button id="disconnect" type="button" disabled>
+          DISCONNECT
+        </button>
+      </div>
+
+      <div id="locationInfo" class="device-info">
+        LOCATION NOT SHARED
+      </div>
+    </section>
+
+  </section>
+
+  <!-- ANDROID PHONE PAGE -->
+  <section id="guestPanel" class="hidden">
+
+    <section class="panel">
+      <h2 class="section-title">DEVICE CONNECTION REQUEST</h2>
+
+      <p class="description">
+        A computer is requesting a connection to this phone.
+        If you accept, your camera and microphone can be shared
+        with the computer during this session.
+      </p>
+
+      <p class="warning">
+        Your camera and microphone are not activated until you press ACCEPT.
+        You can disconnect at any time.
+      </p>
+
+      <button id="acceptConnection" class="main-button" type="button">
+        ACCEPT CONNECTION
+      </button>
+
+      <p id="guestMessage" class="muted"></p>
+    </section>
+
+    <section id="guestControls" class="panel hidden">
+      <h2 class="section-title">YOUR DEVICE</h2>
+
+      <video id="localVideo" autoplay muted playsinline></video>
+
+      <button id="shareLocation" type="button">
+        SHARE MY LOCATION
+      </button>
+
+      <button id="stopConnection" type="button">
+        DISCONNECT
+      </button>
+    </section>
+
+  </section>
+
+  <!-- TERMINAL -->
+  <section class="panel terminal-panel">
+    <div class="panel-header">
+      ROOT TERMINAL <span>● LIVE</span>
+    </div>
+
+    <div id="terminal" class="terminal"></div>
+  </section>
+
+  <footer>
+    HACKER TERMINAL // AUTHORIZED DEVICE CONNECTION ONLY
+  </footer>
+
+</main>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/app.js"></script>
+
+</body>
+</html>
