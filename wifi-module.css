@@ -1,0 +1,77 @@
+
+#wifiPanel {
+  animation: wifiAppear .25s ease;
+}
+
+@keyframes wifiAppear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#wifiPanel .wifi-agent-box {
+  background: #030904;
+  border: 1px solid var(--border);
+  padding: 15px;
+  margin: 16px 0;
+}
+
+#wifiPanel .wifi-agent-title {
+  color: var(--green);
+  font-size: 12px;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+#wifiPanel input {
+  width: 100%;
+  padding: 13px;
+  margin: 5px 0 10px;
+  color: var(--green);
+  background: #020603;
+  border: 1px solid var(--dark-green);
+  font-family: inherit;
+  outline: none;
+}
+
+#wifiPanel input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 12px #00ff6640;
+}
+
+#wifiPanel .wifi-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+}
+
+#wifiPanel .wifi-actions button {
+  min-height: 55px;
+  margin: 0;
+  font-size: 11px;
+}
+
+#wifiPanel .wifi-output {
+  min-height: 150px;
+  max-height: 500px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #a9d9b6;
+  background: #020603;
+  border: 1px solid var(--border);
+  padding: 13px;
+  font: 11px/1.7 Consolas, monospace;
+}
+
+@media (max-width: 600px) {
+  #wifiPanel .wifi-actions {
+    grid-template-columns: 1fr;
+  }
+}
