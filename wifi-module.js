@@ -36,11 +36,6 @@
     <div class="wifi-agent-box">
       <div class="wifi-agent-title">ПОДКЛЮЧЕНИЕ К ПОМОЩНИКУ</div>
 
-      <label for="wifiToken">ACCESS TOKEN</label>
-      <input id="wifiToken" type="password"
-        placeholder="Токен локального помощника"
-        autocomplete="off">
-
       <button id="wifiCheckAgent" class="main-button" type="button">
         ПОДКЛЮЧИТЬ ПОМОЩНИКА
       </button>
@@ -73,7 +68,7 @@
 
       <label for="wifiPassword">ПАРОЛЬ ВЫБРАННОЙ СЕТИ</label>
       <input id="wifiPassword" type="password"
-        placeholder="Введи предполагаемый пароль"
+        placeholder="Введи пароль своей сети"
         autocomplete="off">
 
       <button id="wifiPasswordCheck" class="main-button" type="button">
@@ -148,23 +143,12 @@
     });
   });
 
-  function token() {
-    return $('wifiToken').value.trim();
-  }
-
   async function request(endpoint, options = {}) {
-    const accessToken = token();
-
-    if (!accessToken) {
-      throw new Error('Введи ACCESS TOKEN локального помощника.');
-    }
-
     const response = await fetch(
       'http://127.0.0.1:8765' + endpoint,
       {
         method: options.method || 'GET',
         headers: {
-          Authorization: 'Bearer ' + accessToken,
           ...(options.body ? {
             'Content-Type': 'application/json'
           } : {})
@@ -172,7 +156,8 @@
         body: options.body
           ? JSON.stringify(options.body)
           : undefined,
-        credentials: 'omit'
+        credentials: 'omit',
+        cache: 'no-store'
       }
     );
 
@@ -285,7 +270,7 @@
       output(
         networks.length
           ? 'Найдено сетей: ' + networks.length
-          : 'Не удалось распознать список сетей.\\n\\n' + raw
+          : 'Не удалось распознать список сетей.\n\n' + raw
       );
 
       log('Wi-Fi scan completed.');
@@ -407,9 +392,9 @@
       const data = await request('/api/audit');
 
       output(
-        'ДОСТУПНЫЕ СЕТИ:\\n' +
+        'ДОСТУПНЫЕ СЕТИ:\n' +
         data.results?.available_networks +
-        '\\n\\nСтатус WPS проверяй в настройках собственного роутера.'
+        '\n\nСтатус WPS проверяй в настройках собственного роутера.'
       );
     } catch (error) {
       output(error.message);
@@ -419,7 +404,7 @@
   $('wifiReport').addEventListener('click', async () => {
     try {
       const result = await request('/api/report');
-      output('ОТЧЁТ СОХРАНЁН:\\n' + result.savedTo);
+      output('ОТЧЁТ СОХРАНЁН:\n' + result.savedTo);
     } catch (error) {
       output(error.message);
     }
