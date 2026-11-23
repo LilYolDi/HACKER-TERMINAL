@@ -10,16 +10,10 @@ const { execFile } = require('child_process');
 
 const HOST = '127.0.0.1';
 const PORT = 8765;
-const TOKEN = crypto.randomBytes(32).toString('hex');
 
-// Укажи адрес своего сайта через переменную окружения
-// WIFI_ALLOWED_ORIGINS, разделяя адреса запятыми.
-const ALLOWED_ORIGINS = new Set(
-  (process.env.WIFI_ALLOWED_ORIGINS || 'https://hacker-terminal-hiwg.onrender.com,http://localhost:3000,http://127.0.0.1:3000')
-    .split(',')
-    .map(value => value.trim())
-    .filter(Boolean)
-);
+const ALLOWED_ORIGINS = new Set([
+  'https://hacker-terminal-hiwg.onrender.com'
+]);
 
 function run(file, args, timeout = 15000) {
   return new Promise((resolve, reject) => {
@@ -91,7 +85,7 @@ function corsHeaders(origin) {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
     'Vary': 'Origin',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Private-Network': 'true'
   };
@@ -173,10 +167,7 @@ async function connectWithPassword(ssid, password) {
   }
 
   const profileName = 'HT_WIFI_' + crypto.randomBytes(6).toString('hex');
-  const tempFile = path.join(
-    os.tmpdir(),
-    profileName + '.xml'
-  );
+  const tempFile = path.join(os.tmpdir(), profileName + '.xml');
 
   const profileXml = `<?xml version="1.0"?>
 <WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">
@@ -233,9 +224,7 @@ async function connectWithPassword(ssid, password) {
     };
   } finally {
     try {
-      if (fs.existsSync(tempFile)) {
-        fs.unlinkSync(tempFile);
-      }
+      if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
     } catch {
       // Не прерываем работу агента из-за временного файла.
     }
@@ -245,16 +234,30 @@ async function connectWithPassword(ssid, password) {
 const server = http.createServer(async (req, res) => {
   const origin = req.headers.origin;
 
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
-    return send(res, 403, { error: 'Origin not allowed' });
+  if (req.headers.host !== `${HOST}:${PORT}`) {
+    return send(res, 403, { error: 'Invalid local host' }, origin);
+  }
+
+  if (!origin || !ALLOWED_ORIGINS.has(origin)) {
+    return send(res, 403, { error: 'Origin not allowed' }, origin);
   }
 
   if (req.method === 'OPTIONS') {
+    if (
+      req.headers['access-control-request-headers'] &&
+      !req.headers['access-control-request-headers']
+        .toLowerCase().split(',').map(x => x.trim())
+        .every(x => x === 'content-type')
+    ) {
+      return send(res, 403, { error: 'Request headers not allowed' }, origin);
+    }
+
     return send(res, 204, {}, origin);
   }
 
-  if (req.headers.authorization !== `Bearer ${TOKEN}`) {
-    return send(res, 401, { error: 'Invalid access token' }, origin);
+  if (req.method === 'POST' &&
+      req.headers['content-type']?.split(';')[0] !== 'application/json') {
+    return send(res, 415, { error: 'JSON required' }, origin);
   }
 
   if (req.method === 'GET' && req.url === '/health') {
@@ -348,7 +351,8 @@ server.listen(PORT, HOST, () => {
   console.log('HACKER TERMINAL // WIFI AGENT');
   console.log('STATUS: ONLINE');
   console.log(`ADDRESS: http://${HOST}:${PORT}`);
-  console.log(`ACCESS TOKEN: ${TOKEN}`);
+  console.log('ACCESS TOKEN: NOT REQUIRED');
+  console.log('Access restricted to the configured website origin.');
   console.log('');
   console.log('Keep this window open while using the Wi-Fi module.');
   console.log('Press CTRL+C to stop.');
