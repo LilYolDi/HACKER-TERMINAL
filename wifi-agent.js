@@ -15,7 +15,7 @@ const TOKEN = crypto.randomBytes(32).toString('hex');
 // Укажи адрес своего сайта через переменную окружения
 // WIFI_ALLOWED_ORIGINS, разделяя адреса запятыми.
 const ALLOWED_ORIGINS = new Set(
-  (process.env.WIFI_ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000')
+  (process.env.WIFI_ALLOWED_ORIGINS || 'https://hacker-terminal-hiwg.onrender.com,http://localhost:3000,http://127.0.0.1:3000')
     .split(',')
     .map(value => value.trim())
     .filter(Boolean)
