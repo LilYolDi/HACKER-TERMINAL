@@ -2,20 +2,28 @@
 (() => {
   'use strict';
 
-  const selector = document.getElementById('modeSelector');
+  const $ = id => document.getElementById(id);
+
+  const selector = $('modeSelector');
   const buttonsBox = selector?.querySelector('.mode-buttons');
-  const locationPanel = document.getElementById('locationPanel');
+  const locationPanel = $('locationPanel');
 
   if (!selector || !buttonsBox || !locationPanel) return;
-
   if (/^\/(connect|ip|location)\//.test(location.pathname)) return;
 
-  const modeButton = document.createElement('button');
-  modeButton.id = 'wifiModeButton';
-  modeButton.className = 'mode-button';
-  modeButton.type = 'button';
-  modeButton.textContent = '04 // WI-FI AUDIT';
-  buttonsBox.appendChild(modeButton);
+  // Используем кнопку из index.html — не создаём дубликат.
+  let modeButton = $('wifiModeButton');
+
+  if (!modeButton) {
+    modeButton = document.createElement('button');
+    modeButton.id = 'wifiModeButton';
+    modeButton.className = 'mode-button';
+    modeButton.type = 'button';
+    modeButton.textContent = '04 // WI-FI AUDIT';
+    buttonsBox.appendChild(modeButton);
+  }
+
+  if ($('wifiPanel')) return;
 
   const panel = document.createElement('section');
   panel.id = 'wifiPanel';
@@ -25,7 +33,7 @@
     <h2 class="section-title">WI-FI AUDIT SYSTEM</h2>
 
     <p class="description">
-      Локальная диагностика Wi-Fi адаптера и сетей Windows.
+      Локальная диагностика собственных Wi-Fi сетей.
     </p>
 
     <div class="wifi-agent-box">
@@ -53,23 +61,23 @@
     </div>
 
     <div class="wifi-agent-box">
-      <div class="wifi-agent-title">CONNECT SAVED WIFI PROFILE</div>
-
-      <label for="wifiProfile">SAVED PROFILE NAME</label>
-      <input id="wifiProfile" type="text"
-        placeholder="Название сохранённого профиля">
-
-      <button id="wifiConnect" class="main-button" type="button">
-        CONNECT
-      </button>
+      <div class="wifi-agent-title">SELECTED NETWORK</div>
+      <div id="wifiSelectedNetwork" class="device-info">
+        SELECT A NETWORK USING WIFI SCANNER
+      </div>
     </div>
 
     <div class="wifi-agent-box">
-      <div class="wifi-agent-title">PASSWORD STRENGTH AUDIT</div>
+      <div class="wifi-agent-title">PASSWORD TESTER</div>
 
-      <label for="wifiPassword">ENTER PASSWORD FOR LOCAL CHECK</label>
+      <p class="description">
+        Проверка сложности пароля, введённого владельцем сети.
+        Эта проверка не подтверждает правильность пароля.
+      </p>
+
+      <label for="wifiPassword">PASSWORD</label>
       <input id="wifiPassword" type="password"
-        placeholder="Пароль проверяется только в браузере"
+        placeholder="Введи пароль своей сети"
         autocomplete="off">
 
       <button id="wifiPasswordCheck" class="main-button" type="button">
@@ -82,14 +90,24 @@
     </div>
 
     <div class="wifi-agent-box">
+      <div class="wifi-agent-title">CONNECT SAVED WIFI PROFILE</div>
+
+      <label for="wifiProfile">SAVED PROFILE NAME</label>
+      <input id="wifiProfile" type="text"
+        placeholder="Название сохранённого профиля">
+
+      <button id="wifiConnect" class="main-button" type="button">
+        AUTO CONNECT
+      </button>
+    </div>
+
+    <div class="wifi-agent-box">
       <div class="wifi-agent-title">SCAN RESULTS</div>
       <pre id="wifiOutput" class="wifi-output">WAITING FOR COMMAND...</pre>
     </div>
   `;
 
   locationPanel.insertAdjacentElement('afterend', panel);
-
-  const $ = id => document.getElementById(id);
 
   function log(message) {
     if (typeof window.log === 'function') {
@@ -98,9 +116,13 @@
   }
 
   function switchToWifi() {
-    ['ipPanel', 'hostPanel', 'locationPanel'].forEach(id => {
-      $(id)?.classList.add('hidden');
-    });
+    [
+      'ipPanel',
+      'hostPanel',
+      'locationPanel',
+      'visitorPanel',
+      'guestPanel'
+    ].forEach(id => $(id)?.classList.add('hidden'));
 
     document.querySelectorAll('.mode-button').forEach(button => {
       button.classList.remove('active');
@@ -114,7 +136,11 @@
 
   modeButton.addEventListener('click', switchToWifi);
 
-  ['ipModeButton', 'phoneModeButton', 'locationModeButton'].forEach(id => {
+  [
+    'ipModeButton',
+    'phoneModeButton',
+    'locationModeButton'
+  ].forEach(id => {
     $(id)?.addEventListener('click', () => {
       panel.classList.add('hidden');
       modeButton.classList.remove('active');
@@ -145,9 +171,13 @@
         method: options.method || 'GET',
         headers: {
           'Authorization': 'Bearer ' + accessToken,
-          ...(options.body ? { 'Content-Type': 'application/json' } : {})
+          ...(options.body
+            ? { 'Content-Type': 'application/json' }
+            : {})
         },
-        body: options.body ? JSON.stringify(options.body) : undefined,
+        body: options.body
+          ? JSON.stringify(options.body)
+          : undefined,
         credentials: 'omit'
       }
     );
@@ -170,14 +200,14 @@
       $('wifiAgentStatus').textContent =
         result.online ? 'AGENT ONLINE' : 'AGENT OFFLINE';
 
-      log('Local Wi-Fi agent connected.', 'green');
+      log('Local Wi-Fi agent connected.');
     } catch (error) {
       $('wifiAgentStatus').textContent = error.message;
     }
   }
 
   async function getAudit() {
-    $('wifiOutput').textContent = 'SCANNING...';
+    output('SCANNING...');
     return request('/api/audit');
   }
 
@@ -186,8 +216,14 @@
   $('wifiScan').addEventListener('click', async () => {
     try {
       const data = await getAudit();
-      output(data.results.available_networks);
-      log('Wi-Fi scan completed.', 'green');
+      const networks = data.results.available_networks;
+
+      output(networks);
+
+      $('wifiSelectedNetwork').textContent =
+        'Выбери сеть и укажи её имя в поле профиля для подключения.';
+
+      log('Wi-Fi scan completed.');
     } catch (error) {
       output(error.message);
     }
@@ -204,7 +240,7 @@
         firewall: data.results.firewall
       });
 
-      log('Wi-Fi security diagnostics completed.', 'green');
+      log('Wi-Fi security diagnostics completed.');
     } catch (error) {
       output(error.message);
     }
@@ -219,7 +255,7 @@
         data.results.available_networks +
         '\n\nWPS STATUS:\n' +
         'Windows does not reliably report router WPS status. ' +
-        'Check WPS in the administration panel of your own router.'
+        'Check WPS in your own router administration panel.'
       );
     } catch (error) {
       output(error.message);
@@ -230,7 +266,7 @@
     try {
       const result = await request('/api/report');
       output('REPORT SAVED:\n' + result.savedTo);
-      log('Wi-Fi report saved.', 'green');
+      log('Wi-Fi report saved.');
     } catch (error) {
       output(error.message);
     }
@@ -259,6 +295,12 @@
 
   $('wifiPasswordCheck').addEventListener('click', () => {
     const password = $('wifiPassword').value;
+
+    if (!password) {
+      $('wifiPasswordResult').textContent = 'ENTER A PASSWORD';
+      return;
+    }
+
     let score = 0;
 
     if (password.length >= 12) score++;
@@ -275,7 +317,7 @@
     $('wifiPasswordResult').textContent =
       'LENGTH: ' + password.length +
       '\nSTRENGTH: ' + strength +
-      '\nCHECKED LOCALLY IN YOUR BROWSER.';
+      '\nLOCAL STRENGTH CHECK ONLY — PASSWORD NOT VERIFIED.';
 
     $('wifiPassword').value = '';
   });
